@@ -1041,24 +1041,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Nearby Facilities
   app.post("/api/admin/properties/:propertyId/facilities", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log("🏢 POST /api/admin/properties/:propertyId/facilities called");
+      console.log("📦 Request body:", req.body);
+      console.log("📦 Request params:", req.params);
+      
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
+        console.log("❌ Invalid property ID:", req.params.propertyId);
         return res.status(400).json({ message: "Invalid property ID" });
       }
       
+      console.log("🔍 Looking up property with ID:", propertyId);
       // Get the property to check its coordinates
       const property = await storage.getPropertyById(propertyId);
       if (!property) {
+        console.log("❌ Property not found:", propertyId);
         return res.status(404).json({ message: "Property not found" });
       }
+      
+      console.log("✅ Property found:", property.title);
       
       let facilityData = {
         ...req.body,
         propertyId
       };
       
+      console.log("📋 Initial facility data:", facilityData);
+      
       // Calculate distanceValue in meters if not provided
       if (!facilityData.distanceValue && facilityData.distance) {
+        console.log("🔢 Calculating distance value from:", facilityData.distance);
         // Try to extract numeric value from distance string (e.g., "2.5 km" -> 2.5)
         const distanceMatch = facilityData.distance.match(/^(\d+(\.\d+)?)/);
         if (distanceMatch) {
@@ -1073,6 +1085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Default to kilometers
             facilityData.distanceValue = Math.round(distanceNumeric * 1000);
           }
+          console.log("✅ Calculated distance value:", facilityData.distanceValue);
         }
       }
       
@@ -1083,6 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         !facilityData.distanceValue
       ) {
         try {
+          console.log("🗺️ Calculating distance using coordinates");
           // Calculate distance using Haversine formula
           const R = 6371e3; // Earth's radius in meters
           const φ1 = parseFloat(property.latitude) * Math.PI/180;
@@ -1106,16 +1120,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
               facilityData.distance = `${(distanceInMeters / 1000).toFixed(1)} km`;
             }
           }
+          console.log("✅ Calculated distance from coordinates:", distanceInMeters);
         } catch (error) {
-          console.error("Error calculating distance:", error);
+          console.error("❌ Error calculating distance:", error);
           // Continue without calculated distance
         }
       }
       
+      console.log("📋 Final facility data before validation:", facilityData);
+      console.log("🔍 Validating with insertNearbyFacilitySchema...");
+      
       const validatedData = insertNearbyFacilitySchema.parse(facilityData);
+      console.log("✅ Validation successful:", validatedData);
+      
+      console.log("💾 Creating facility in database...");
       const facility = await storage.createNearbyFacility(validatedData);
+      console.log("✅ Facility created successfully:", facility);
+      
       res.status(201).json(facility);
     } catch (error) {
+      console.error("❌ Error in facilities endpoint:", error);
+      console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace available');
       next(error);
     }
   }));

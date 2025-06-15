@@ -889,19 +889,28 @@ async function registerRoutes(app) {
     }));
     app.post("/api/admin/properties/:propertyId/facilities", ensureAuthenticated, routeHandler(async (req, res, next) => {
         try {
+            console.log("🏢 POST /api/admin/properties/:propertyId/facilities called");
+            console.log("📦 Request body:", req.body);
+            console.log("📦 Request params:", req.params);
             const propertyId = parseInt(req.params.propertyId);
             if (isNaN(propertyId)) {
+                console.log("❌ Invalid property ID:", req.params.propertyId);
                 return res.status(400).json({ message: "Invalid property ID" });
             }
+            console.log("🔍 Looking up property with ID:", propertyId);
             const property = await storage_1.storage.getPropertyById(propertyId);
             if (!property) {
+                console.log("❌ Property not found:", propertyId);
                 return res.status(404).json({ message: "Property not found" });
             }
+            console.log("✅ Property found:", property.title);
             let facilityData = {
                 ...req.body,
                 propertyId
             };
+            console.log("📋 Initial facility data:", facilityData);
             if (!facilityData.distanceValue && facilityData.distance) {
+                console.log("🔢 Calculating distance value from:", facilityData.distance);
                 const distanceMatch = facilityData.distance.match(/^(\d+(\.\d+)?)/);
                 if (distanceMatch) {
                     const distanceNumeric = parseFloat(distanceMatch[1]);
@@ -914,12 +923,14 @@ async function registerRoutes(app) {
                     else {
                         facilityData.distanceValue = Math.round(distanceNumeric * 1000);
                     }
+                    console.log("✅ Calculated distance value:", facilityData.distanceValue);
                 }
             }
             if (property.latitude && property.longitude &&
                 facilityData.latitude && facilityData.longitude &&
                 !facilityData.distanceValue) {
                 try {
+                    console.log("🗺️ Calculating distance using coordinates");
                     const R = 6371e3;
                     const φ1 = parseFloat(property.latitude) * Math.PI / 180;
                     const φ2 = parseFloat(facilityData.latitude) * Math.PI / 180;
@@ -939,16 +950,24 @@ async function registerRoutes(app) {
                             facilityData.distance = `${(distanceInMeters / 1000).toFixed(1)} km`;
                         }
                     }
+                    console.log("✅ Calculated distance from coordinates:", distanceInMeters);
                 }
                 catch (error) {
-                    console.error("Error calculating distance:", error);
+                    console.error("❌ Error calculating distance:", error);
                 }
             }
+            console.log("📋 Final facility data before validation:", facilityData);
+            console.log("🔍 Validating with insertNearbyFacilitySchema...");
             const validatedData = schema_1.insertNearbyFacilitySchema.parse(facilityData);
+            console.log("✅ Validation successful:", validatedData);
+            console.log("💾 Creating facility in database...");
             const facility = await storage_1.storage.createNearbyFacility(validatedData);
+            console.log("✅ Facility created successfully:", facility);
             res.status(201).json(facility);
         }
         catch (error) {
+            console.error("❌ Error in facilities endpoint:", error);
+            console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace available');
             next(error);
         }
     }));
