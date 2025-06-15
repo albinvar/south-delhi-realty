@@ -1,32 +1,15 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-// import themePlugin from "@replit/vite-plugin-shadcn-theme-json";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import { defineConfig } from "vite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Create a function to handle the dynamic import
-async function getPlugins() {
-  const plugins = [
+export default defineConfig({
+  plugins: [
     react(),
-    runtimeErrorOverlay(),
-    // themePlugin(),
-  ];
-
-  if (process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined) {
-    const cartographer = await import("@replit/vite-plugin-cartographer");
-    plugins.push(cartographer.cartographer());
-  }
-
-  return plugins;
-}
-
-// Export the config as a function that returns a promise
-export default defineConfig(async () => ({
-  plugins: await getPlugins(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),
@@ -37,5 +20,11 @@ export default defineConfig(async () => ({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: path.resolve(__dirname, "client", "index.html"),
+    },
   },
-}));
+  define: {
+    global: 'globalThis',
+  },
+});

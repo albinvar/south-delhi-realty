@@ -1,0 +1,53 @@
+name: south-delhi-realty
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: your-username/south-delhi-real-estate
+    branch: main
+  run_command: npm start
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  build_command: npm run build
+  routes:
+  - path: /
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: "8080"
+  - key: DB_HOST
+    value: ${DB_HOST}
+  - key: DB_USER
+    value: ${DB_USER}
+  - key: DB_PASSWORD
+    value: ${DB_PASSWORD}
+  - key: DB_NAME
+    value: ${DB_NAME}
+  - key: DB_PORT
+    value: ${DB_PORT}
+  - key: SESSION_SECRET
+    value: ${SESSION_SECRET}
+  - key: CLOUDINARY_CLOUD_NAME
+    value: ${CLOUDINARY_CLOUD_NAME}
+  - key: CLOUDINARY_API_KEY
+    value: ${CLOUDINARY_API_KEY}
+  - key: CLOUDINARY_API_SECRET
+    value: ${CLOUDINARY_API_SECRET}
+  - key: GOOGLE_CLIENT_ID
+    value: ${GOOGLE_CLIENT_ID}
+  - key: GOOGLE_CLIENT_SECRET
+    value: ${GOOGLE_CLIENT_SECRET}
+  - key: EMAIL_HOST
+    value: ${EMAIL_HOST}
+  - key: EMAIL_PORT
+    value: ${EMAIL_PORT}
+  - key: EMAIL_USER
+    value: ${EMAIL_USER}
+  - key: EMAIL_PASS
+    value: ${EMAIL_PASS}
+  - key: ALLOWED_ORIGINS
+    value: ${ALLOWED_ORIGINS}
+  - key: SSL_ENABLED
+    value: "true" 
