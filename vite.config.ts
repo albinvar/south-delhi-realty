@@ -16,13 +16,10 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "shared"),
     },
   },
-  root: path.resolve(__dirname, "client"),
+  root: "client",
   build: {
-    outDir: path.resolve(__dirname, "dist/public"),
+    outDir: "../dist/public",
     emptyOutDir: true,
-    rollupOptions: {
-      input: path.resolve(__dirname, "client", "index.html"),
-    },
   },
   define: {
     global: 'globalThis',
