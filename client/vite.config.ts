@@ -12,10 +12,12 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          ui: ['@headlessui/react', '@heroicons/react'],
-          forms: ['react-hook-form'],
-          utils: ['axios', 'clsx']
+          router: ['wouter'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
+          forms: ['react-hook-form', '@hookform/resolvers'],
+          utils: ['clsx', 'tailwind-merge'],
+          charts: ['recharts'],
+          icons: ['lucide-react']
         }
       }
     },
