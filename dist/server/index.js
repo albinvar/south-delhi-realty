@@ -117,7 +117,14 @@ async function startServer() {
         }
         const nodeEnv = (process.env.NODE_ENV || 'development').trim();
         const allowedOrigins = nodeEnv === 'production'
-            ? (process.env.ALLOWED_ORIGINS || 'http://localhost:7822,http://127.0.0.1:7822,http://localhost:5000,http://127.0.0.1:5000,https://southdelhirealty.com,https://south-delhi-realty-4g75c.ondigitalocean.app').split(',').filter(Boolean).map(origin => origin.trim())
+            ? [
+                'https://south-delhi-realty-4g75c.ondigitalocean.app',
+                'https://southdelhirealty.com',
+                'http://localhost:7822',
+                'http://127.0.0.1:7822',
+                'http://localhost:5000',
+                'http://127.0.0.1:5000'
+            ]
             : [
                 'http://localhost:3000',
                 'http://localhost:5000',
