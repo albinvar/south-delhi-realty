@@ -1,0 +1,77 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "7822:7822"
+      - "7823:7823"
+      - "7824:7824"
+    environment:
+      - NODE_ENV=production
+      - PORT=7822
+      - HMR_PORT=7823
+      - DB_HOST=host.docker.internal
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=southdelhirealestate
+      - DB_PORT=3306
+      - ALLOWED_ORIGINS=http://localhost:7822,http://127.0.0.1:7822,https://southdelhirealty.com,https://taxandtaxes.com
+      - BACKEND_URL=https://southdelhirealty.com
+      - LOG_LEVEL=info
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_SECURE=${EMAIL_SECURE}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - CASHFREE_APP_ID=${CASHFREE_APP_ID}
+      - CASHFREE_SECRET_KEY=${CASHFREE_SECRET_KEY}
+      - CASHFREE_ENVIRONMENT=${CASHFREE_ENVIRONMENT}
+      - FRONTEND_URL=https://taxandtaxes.com
+      - CLIENT_URL=https://southdelhirealty.com
+      - TAX_EMAIL_SERVICE_PORT=7824
+      - TAX_EMAIL_USER=taxndtaxes@gmail.com
+      - TAX_EMAIL_PASS=oyxtyoqitsgqwtkk
+      - TAX_ADMIN_EMAIL=taxndtaxes@gmail.com
+    volumes:
+      - uploads:/app/uploads
+      - logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env.docker
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - uploads:/usr/share/nginx/uploads
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  logs: 
