@@ -90,8 +90,8 @@ export function usePerformanceMonitoring() {
   useEffect(() => {
     // Monitor Core Web Vitals with proper imports
     import('web-vitals').then((webVitals) => {
-      // Monitor metrics without logging to console
-      // In production, these would be sent to analytics service
+        // Monitor metrics without logging to console
+        // In production, these would be sent to analytics service
       
       // Use optional chaining since some metrics might not be available in all versions
       if (webVitals.onCLS) {
@@ -126,8 +126,8 @@ export function usePerformanceMonitoring() {
       if (webVitals.onTTFB) {
         webVitals.onTTFB((metric: any) => {
           // Send to analytics service if needed
-        });
-      }
+      });
+    }
     }).catch(() => {
       // Web vitals not available, skip monitoring
     });

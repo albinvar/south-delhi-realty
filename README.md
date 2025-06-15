@@ -200,7 +200,7 @@ npm run init-superadmin
    - Cloudinary account for media storage
 
 3. **Deployment Process:**
-   ```bash
+```bash
    # Build application
    npm run build
    
@@ -210,7 +210,7 @@ npm run init-superadmin
 
 ### Manual Deployment
 1. **Server Setup:**
-   ```bash
+```bash
    # Install Node.js 18
    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
    apt-get install -y nodejs
@@ -221,7 +221,7 @@ npm run init-superadmin
    ```
 
 2. **Application Deployment:**
-   ```bash
+```bash
    # Copy files to server
    scp -r dist/ user@server:/var/www/app/
    
