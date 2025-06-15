@@ -520,9 +520,9 @@ export default function PropertyForm({ propertyId }: PropertyFormProps) {
           mediaType: item.mediaType,
           isFeatured: Boolean(item.isFeatured),
           orderIndex: item.orderIndex || 0,
-          fileName: item.fileName,
-          processingStatus: item.processingStatus,
-          processingMessage: item.processingMessage
+          fileName: (item as any).fileName || '',
+          processingStatus: (item as any).processingStatus || 'completed',
+          processingMessage: (item as any).processingMessage || ''
         })));
       }
       
