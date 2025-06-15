@@ -10,7 +10,7 @@
     "build:deploy": "npm run pre-deploy-check && npm run build",
     "pre-deploy-check": "node scripts/pre-deploy-check.cjs",
     "build:server": "tsc --project tsconfig.server.json",
-    "build:client": "vite build",
+    "build:client": "node scripts/build-client.cjs",
     "copy-package": "node scripts/prepare-deployment.js",
     "serve": "vite preview",
     "start": "node dist/server/index.js",
