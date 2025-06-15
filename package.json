@@ -51,7 +51,6 @@
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate:mysql",
     "db:studio": "drizzle-kit studio",
-    "prestart": "npm run build",
     "verify:production": "node scripts/verify-production-ready.js",
     "tax-service": "node services/tax-email-service.js",
     "tax-service:dev": "node scripts/start-tax-service.js",
