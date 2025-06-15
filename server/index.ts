@@ -183,6 +183,18 @@ async function startServer() {
     app.use(passport.initialize() as any);
     app.use(passport.session() as any);
 
+    // Health check endpoint (for DigitalOcean and general monitoring)
+    app.get('/health', async (req: any, res: any) => {
+      try {
+        // Check database connection using our storage layer
+        await storage.getDashboardStats(); // Simple health check
+        res.status(200).json({ status: 'healthy' });
+      } catch (error) {
+        logger.error('Health check failed:', error);
+        res.status(503).json({ status: 'unhealthy', error: 'Database connection failed' });
+      }
+    });
+
     // Readiness check (for Kubernetes/Docker)
     app.get('/ready', async (req: any, res: any) => {
       try {

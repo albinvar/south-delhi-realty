@@ -10,6 +10,13 @@ services:
   instance_count: 1
   instance_size_slug: basic-xs
   build_command: npm install && npm run build
+  health_check:
+    http_path: /health
+    initial_delay_seconds: 60
+    period_seconds: 10
+    timeout_seconds: 30
+    success_threshold: 1
+    failure_threshold: 3
   routes:
   - path: /
   envs:
