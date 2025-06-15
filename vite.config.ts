@@ -4,15 +4,18 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
-  root: "client",
+  root: path.resolve(process.cwd(), "client"),
   build: {
-    outDir: "../dist/public",
+    outDir: path.resolve(process.cwd(), "dist", "public"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: path.resolve(process.cwd(), "client", "index.html")
+    }
   },
   resolve: {
     alias: {
-      "@": path.resolve("client/src"),
-      "@shared": path.resolve("shared"),
+      "@": path.resolve(process.cwd(), "client", "src"),
+      "@shared": path.resolve(process.cwd(), "shared"),
     },
   },
   define: {
