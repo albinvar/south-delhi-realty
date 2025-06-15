@@ -261,9 +261,6 @@ async function startServer() {
     await registerRoutes(app);
     console.log('✅ Routes registered successfully');
 
-    // Serve static files
-    app.use(express.static('dist/public'));
-
     // Setup Vite in development or static files in production (after API routes)
     const env = (process.env.NODE_ENV || 'development').trim();
     console.log(`Environment check: "${env}"`);

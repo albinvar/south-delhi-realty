@@ -99,7 +99,21 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Use Express static with minimal configuration to avoid errors
+  // Set proper MIME types for static assets
+  app.use('/assets', express.static(path.resolve(distPath, 'assets'), {
+    maxAge: '1y', // Long cache for hashed assets
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+      if (path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      } else if (path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      }
+    }
+  }));
+
+  // Serve other static files (images, fonts, etc.)
   app.use(express.static(distPath, {
     maxAge: '1d', // Cache for 1 day
     etag: true,

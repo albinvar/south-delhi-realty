@@ -84,6 +84,19 @@ function serveStatic(app) {
     if (!fs_1.default.existsSync(distPath)) {
         throw new Error(`Could not find the build directory: ${distPath}, make sure to build the client first`);
     }
+    app.use('/assets', express_1.default.static(path_1.default.resolve(distPath, 'assets'), {
+        maxAge: '1y',
+        etag: true,
+        lastModified: true,
+        setHeaders: (res, path) => {
+            if (path.endsWith('.css')) {
+                res.setHeader('Content-Type', 'text/css');
+            }
+            else if (path.endsWith('.js')) {
+                res.setHeader('Content-Type', 'application/javascript');
+            }
+        }
+    }));
     app.use(express_1.default.static(distPath, {
         maxAge: '1d',
         etag: true,

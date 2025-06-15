@@ -177,6 +177,16 @@ async function startServer() {
         app.use((0, express_session_1.default)(sessionConfig));
         app.use(passport_1.default.initialize());
         app.use(passport_1.default.session());
+        app.get('/health', async (req, res) => {
+            try {
+                await storage_1.storage.getDashboardStats();
+                res.status(200).json({ status: 'healthy' });
+            }
+            catch (error) {
+                logger.error('Health check failed:', error);
+                res.status(503).json({ status: 'unhealthy', error: 'Database connection failed' });
+            }
+        });
         app.get('/ready', async (req, res) => {
             try {
                 await storage_1.storage.getDashboardStats();
@@ -226,7 +236,6 @@ async function startServer() {
         app.use('/', sitemap_1.default);
         await (0, routes_1.registerRoutes)(app);
         console.log('✅ Routes registered successfully');
-        app.use(express_1.default.static('dist/public'));
         const env = (process.env.NODE_ENV || 'development').trim();
         console.log(`Environment check: "${env}"`);
         if (env === "development") {
