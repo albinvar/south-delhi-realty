@@ -15,7 +15,7 @@ import { registerRoutes } from "./routes";
 import sitemapRoutes from './sitemap';
 import { storage } from './storage';
 import { createLogger } from './utils/logger';
-import { log, serveStatic, setupVite } from "./vite";
+import { log, setupVite } from "./vite";
 
 // Initialize logger
 const logger = createLogger();
@@ -123,13 +123,6 @@ async function startServer() {
 
     console.log(`CORS allowed origins: ${JSON.stringify(allowedOrigins)}`);
 
-    // Serve static files BEFORE CORS to avoid CORS issues with assets
-    const envCheck = (process.env.NODE_ENV || 'development').trim();
-    if (envCheck === "production") {
-      console.log("Setting up static file serving before CORS");
-      serveStatic(app);
-    }
-
     const corsOptions: cors.CorsOptions = {
       origin: (origin, callback) => {
         // Allow requests with no origin (same-origin requests, mobile apps, curl requests)
@@ -151,7 +144,8 @@ async function startServer() {
       exposedHeaders: ['Set-Cookie']
     };
 
-    app.use(cors(corsOptions));
+    // Apply CORS only to API routes to avoid issues with static assets
+    app.use('/api', cors(corsOptions));
 
     // Session configuration with production-ready settings
     if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'your-secret-key-change-in-production') {
@@ -269,14 +263,16 @@ async function startServer() {
     await registerRoutes(app);
     console.log('✅ Routes registered successfully');
 
-    // Setup Vite in development (static files already set up in production)
+    // Setup Vite in development or static files in production (after API routes)
     const env = (process.env.NODE_ENV || 'development').trim();
     console.log(`Environment check: "${env}"`);
     if (env === "development") {
       console.log("Using Vite development server");
       await setupVite(app, server);
     } else {
-      console.log("Static file serving already configured before CORS");
+      console.log("Using static file serving");
+      const { serveStatic } = await import("./vite");
+      serveStatic(app);
     }
 
     // 404 handler for API routes

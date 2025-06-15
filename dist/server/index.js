@@ -129,11 +129,6 @@ async function startServer() {
                 'https://south-delhi-realty-4g75c.ondigitalocean.app'
             ];
         console.log(`CORS allowed origins: ${JSON.stringify(allowedOrigins)}`);
-        const envCheck = (process.env.NODE_ENV || 'development').trim();
-        if (envCheck === "production") {
-            console.log("Setting up static file serving before CORS");
-            (0, vite_1.serveStatic)(app);
-        }
         const corsOptions = {
             origin: (origin, callback) => {
                 if (!origin) {
@@ -152,7 +147,7 @@ async function startServer() {
             allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
             exposedHeaders: ['Set-Cookie']
         };
-        app.use((0, cors_1.default)(corsOptions));
+        app.use('/api', (0, cors_1.default)(corsOptions));
         if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'your-secret-key-change-in-production') {
             if (process.env.NODE_ENV === 'production') {
                 logger.error('SESSION_SECRET must be set in production!');
@@ -249,7 +244,9 @@ async function startServer() {
             await (0, vite_1.setupVite)(app, server);
         }
         else {
-            console.log("Static file serving already configured before CORS");
+            console.log("Using static file serving");
+            const { serveStatic } = await Promise.resolve().then(() => __importStar(require("./vite")));
+            serveStatic(app);
         }
         app.use('/api/*', (req, res) => {
             res.status(404).json({ message: 'API endpoint not found' });
