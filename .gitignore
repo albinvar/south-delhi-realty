@@ -95,7 +95,6 @@ tmp/
 
 # Testing artifacts
 *.txt
-*.html
 response.json
 cookies.txt
 headers.txt
