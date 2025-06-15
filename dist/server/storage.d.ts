@@ -1,0 +1,136 @@
+import { users, type Inquiry, type InsertInquiry, type InsertNearbyFacility, type InsertProperty, type InsertPropertyMedia, type InsertUser, type NearbyFacility, type Property, type PropertyMedia, type PropertyWithRelations, type User } from "../shared/schema";
+import session from "express-session";
+export interface IStorage {
+    getUser(id: number): Promise<User | undefined>;
+    findUserById(id: number): Promise<User | undefined>;
+    findUserByUsername(username: string): Promise<User | undefined>;
+    findUserByEmail(email: string): Promise<User | undefined>;
+    findUserByGoogleId(googleId: string): Promise<User | undefined>;
+    getUserByUsername(username: string): Promise<User | undefined>;
+    getUserByEmail(email: string): Promise<User | undefined>;
+    createUser(user: InsertUser): Promise<User>;
+    createGoogleUser(userData: {
+        googleId: string;
+        username: string;
+        email: string;
+        role: string;
+    }): Promise<User>;
+    linkGoogleAccount(userId: number, googleId: string): Promise<void>;
+    updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
+    deleteUser(id: number): Promise<boolean>;
+    getProperties(filters?: Partial<Property>): Promise<PropertyWithRelations[]>;
+    getPropertiesWithPagination(filters?: Partial<Property> & {
+        page?: number;
+        limit?: number;
+        status?: string | "all";
+        category?: string | "all";
+        propertyType?: string | "all";
+        subType?: string | "all";
+        minPrice?: number;
+        maxPrice?: number;
+        minArea?: number;
+        maxArea?: number;
+        bedrooms?: number;
+        bathrooms?: number;
+        furnishedStatus?: string | "all";
+        parking?: string | "all";
+        facing?: string | "all";
+        search?: string;
+    }): Promise<{
+        properties: PropertyWithRelations[];
+        total: number;
+    }>;
+    getPropertyById(id: number): Promise<PropertyWithRelations | undefined>;
+    getPropertyBySlug(slug: string): Promise<PropertyWithRelations | undefined>;
+    createProperty(property: InsertProperty): Promise<PropertyWithRelations>;
+    updateProperty(id: number, property: Partial<InsertProperty>): Promise<boolean>;
+    deleteProperty(id: number): Promise<boolean>;
+    getPropertyMedia(propertyId: number): Promise<PropertyMedia[]>;
+    createPropertyMedia(media: InsertPropertyMedia): Promise<PropertyMedia>;
+    deletePropertyMedia(id: number): Promise<boolean>;
+    setFeaturedMedia(id: number, propertyId: number): Promise<boolean>;
+    getNearbyFacilities(propertyId: number): Promise<NearbyFacility[]>;
+    createNearbyFacility(facility: InsertNearbyFacility): Promise<NearbyFacility>;
+    deleteNearbyFacility(id: number): Promise<boolean>;
+    getInquiries(filters?: Partial<Inquiry>): Promise<Inquiry[]>;
+    getInquiryById(id: number): Promise<Inquiry | undefined>;
+    createInquiry(inquiry: InsertInquiry): Promise<Inquiry>;
+    updateInquiryStatus(id: number, status: 'new' | 'contacted' | 'resolved'): Promise<Inquiry | null>;
+    deleteInquiry(id: number): Promise<boolean>;
+    getDashboardStats(): Promise<{
+        totalProperties: number;
+        propertiesForSale: number;
+        propertiesForRent: number;
+        newInquiries: number;
+    }>;
+    sessionStore: session.Store;
+    getUsers: () => Promise<Omit<typeof users.$inferSelect, "password">[]>;
+}
+export declare class DatabaseStorage implements IStorage {
+    sessionStore: session.Store;
+    constructor();
+    getUser(id: number): Promise<User | undefined>;
+    findUserById(id: number): Promise<User | undefined>;
+    findUserByUsername(username: string): Promise<User | undefined>;
+    findUserByEmail(email: string): Promise<User | undefined>;
+    findUserByGoogleId(googleId: string): Promise<User | undefined>;
+    getUserByUsername(username: string): Promise<User | undefined>;
+    getUserByEmail(email: string): Promise<User | undefined>;
+    createUser(userData: Partial<typeof users.$inferInsert>): Promise<typeof users.$inferSelect>;
+    createGoogleUser(userData: {
+        googleId: string;
+        username: string;
+        email: string;
+        role: string;
+    }): Promise<User>;
+    linkGoogleAccount(userId: number, googleId: string): Promise<void>;
+    deleteUser(id: number): Promise<boolean>;
+    getProperties(filters?: Partial<Property>): Promise<PropertyWithRelations[]>;
+    getPropertiesWithPagination(filters?: Partial<Property> & {
+        page?: number;
+        limit?: number;
+        status?: string | "all";
+        category?: string | "all";
+        propertyType?: string | "all";
+        subType?: string | "all";
+        minPrice?: number;
+        maxPrice?: number;
+        minArea?: number;
+        maxArea?: number;
+        bedrooms?: number;
+        bathrooms?: number;
+        furnishedStatus?: string | "all";
+        parking?: string | "all";
+        facing?: string | "all";
+        search?: string;
+    }): Promise<{
+        properties: PropertyWithRelations[];
+        total: number;
+    }>;
+    getPropertyById(id: number): Promise<PropertyWithRelations | undefined>;
+    getPropertyBySlug(slug: string): Promise<PropertyWithRelations | undefined>;
+    createProperty(propertyData: InsertProperty): Promise<PropertyWithRelations>;
+    updateProperty(id: number, updates: Partial<InsertProperty>): Promise<boolean>;
+    deleteProperty(id: number): Promise<boolean>;
+    getPropertyMedia(propertyId: number): Promise<PropertyMedia[]>;
+    createPropertyMedia(mediaData: InsertPropertyMedia): Promise<PropertyMedia>;
+    deletePropertyMedia(id: number): Promise<boolean>;
+    setFeaturedMedia(id: number, propertyId: number): Promise<boolean>;
+    getNearbyFacilities(propertyId: number): Promise<NearbyFacility[]>;
+    createNearbyFacility(facilityData: InsertNearbyFacility): Promise<NearbyFacility>;
+    deleteNearbyFacility(id: number): Promise<boolean>;
+    getInquiries(filters?: Partial<Inquiry>): Promise<Inquiry[]>;
+    getInquiryById(id: number): Promise<Inquiry | undefined>;
+    createInquiry(inquiryData: InsertInquiry): Promise<Inquiry>;
+    updateInquiryStatus(id: number, status: "new" | "contacted" | "resolved"): Promise<Inquiry | null>;
+    deleteInquiry(id: number): Promise<boolean>;
+    getDashboardStats(): Promise<{
+        totalProperties: number;
+        propertiesForSale: number;
+        propertiesForRent: number;
+        newInquiries: number;
+    }>;
+    getUsers(): Promise<Omit<typeof users.$inferSelect, "password">[]>;
+    updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
+}
+export declare const storage: DatabaseStorage;

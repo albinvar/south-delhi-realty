@@ -9,7 +9,7 @@ services:
   environment_slug: node-js
   instance_count: 1
   instance_size_slug: basic-s
-  build_command: npm install && npm run build
+  build_command: npm install && npm run build:production
   health_check:
     http_path: /health
     initial_delay_seconds: 60

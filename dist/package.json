@@ -1,0 +1,14 @@
+{
+  "name": "south-delhi-real-estate-dist",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "health-check": "curl -f http://localhost:5000/health || exit 1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

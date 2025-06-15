@@ -8,7 +8,7 @@ coverage/
 
 # Production
 build/
-dist/
+# dist/ - Allow dist directory for pre-built assets
 out/
 
 # Environment Variables
@@ -166,7 +166,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build output
-dist/
+# dist/ - Allow dist directory for pre-built assets
 build/
 
 # IDE and editor files
