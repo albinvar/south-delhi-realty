@@ -40,12 +40,11 @@ exports.registerRoutes = registerRoutes;
 const cloudinary_1 = require("cloudinary");
 const drizzle_orm_1 = require("drizzle-orm");
 const http_1 = require("http");
-const multer_1 = __importDefault(require("multer"));
-const ws_1 = require("ws");
 const schema_1 = require("../shared/schema");
 const auth_1 = __importDefault(require("./auth"));
 const db_1 = require("./db");
 const email_1 = require("./email");
+const multer_config_1 = require("./multer-config");
 const storage_1 = require("./storage");
 const app_typed = (app) => app;
 const routeHandler = (handler) => handler;
@@ -59,12 +58,6 @@ console.log("🔧 Cloudinary Configuration:");
 console.log("   CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME ? "✅ Set" : "❌ Missing");
 console.log("   API_KEY:", process.env.CLOUDINARY_API_KEY ? "✅ Set" : "❌ Missing");
 console.log("   API_SECRET:", process.env.CLOUDINARY_API_SECRET ? "✅ Set" : "❌ Missing");
-const upload = (0, multer_1.default)({
-    storage: multer_1.default.memoryStorage(),
-    limits: {
-        fileSize: 100 * 1024 * 1024
-    }
-});
 const checkCloudinaryConfig = (req, res, next) => {
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
         res.status(500).json({
@@ -88,55 +81,6 @@ async function registerRoutes(app) {
     const httpServer = (0, http_1.createServer)(app);
     const router = app;
     const appTyped = app;
-    const wsServer = new ws_1.WebSocketServer({
-        server: httpServer,
-        path: '/ws'
-    });
-    wsServer.on('connection', (ws, req) => {
-        const connectionId = Math.random().toString(36).substring(2, 8);
-        console.log(`🔌 New WebSocket connection [${connectionId}]`);
-        console.log('🔍 Debug - req.url:', req.url);
-        console.log('🔍 Debug - req.headers.host:', req.headers.host);
-        const url = new URL(req.url || '', `http://${req.headers.host}`);
-        console.log('🔍 Debug - parsed URL:', url.toString());
-        console.log('🔍 Debug - searchParams:', url.searchParams.toString());
-        const token = url.searchParams.get('token');
-        console.log('🔍 Debug - extracted token:', token ? 'TOKEN_FOUND' : 'NO_TOKEN');
-        if (!token || token.length < 10) {
-            console.log('❌ WebSocket connection rejected: Invalid or missing token');
-            ws.close(1008, 'Authentication required');
-            return;
-        }
-        console.log('✅ WebSocket token validation passed');
-        ws.on('message', (message) => {
-            try {
-                console.log('📥 Received WebSocket message:', message.toString());
-                ws.send(JSON.stringify({
-                    type: 'echo',
-                    data: JSON.parse(message.toString())
-                }));
-            }
-            catch (error) {
-                console.error('❌ Error handling WebSocket message:', error);
-                ws.send(JSON.stringify({
-                    type: 'error',
-                    message: 'Failed to process message'
-                }));
-            }
-        });
-        ws.on('close', (code, reason) => {
-            console.log(`🔌 WebSocket connection closed [${connectionId}] - Code: ${code}, Reason: ${reason.toString()}`);
-        });
-        ws.on('error', (error) => {
-            console.error(`❌ WebSocket error [${connectionId}]:`, error);
-        });
-        ws.send(JSON.stringify({
-            type: 'connected',
-            message: 'WebSocket connection established',
-            connectionId: connectionId
-        }));
-        console.log(`✅ WebSocket connection fully established [${connectionId}]`);
-    });
     app.use('/api/auth', auth_1.default);
     const ensureAuthenticated = (req, res, next) => {
         if (req.isAuthenticated()) {
@@ -781,7 +725,7 @@ async function registerRoutes(app) {
             });
         }
     }));
-    app.post("/api/admin/media/upload-multiple", ensureAuthenticated, checkCloudinaryConfig, upload.array('files', 10), (req, res) => {
+    app.post("/api/admin/media/upload-multiple", ensureAuthenticated, checkCloudinaryConfig, multer_config_1.upload.array('files', 10), (req, res) => {
         try {
             const uploadedFiles = req.files;
             if (!uploadedFiles || uploadedFiles.length === 0) {

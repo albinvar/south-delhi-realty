@@ -76,13 +76,7 @@ async function startServer() {
                         "'self'",
                         "https://api.cloudinary.com",
                         "https://res.cloudinary.com",
-                        "https://overpass-api.de",
-                        ...(isDevelopment ? [
-                            "ws://localhost:*",
-                            "ws://127.0.0.1:*",
-                            "wss://localhost:*",
-                            "wss://127.0.0.1:*"
-                        ] : [])
+                        "https://overpass-api.de"
                     ],
                     frameSrc: ["'none'"],
                     objectSrc: ["'none'"],

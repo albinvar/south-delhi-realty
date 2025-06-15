@@ -1,4 +1,3 @@
-import { WebSocketProvider } from "@/components/layout/websocket-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -54,10 +53,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <WebSocketProvider>
-          <Router />
-          <Toaster />
-        </WebSocketProvider>
+        <Router />
+        <Toaster />
       </AuthProvider>
     </QueryClientProvider>
   );

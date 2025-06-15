@@ -7215,3302 +7215,6 @@ function useToast() {
     dismiss: (toastId) => dispatch({ type: "DISMISS_TOAST", toastId })
   };
 }
-var Subscribable = class {
-  constructor() {
-    this.listeners = /* @__PURE__ */ new Set();
-    this.subscribe = this.subscribe.bind(this);
-  }
-  subscribe(listener) {
-    this.listeners.add(listener);
-    this.onSubscribe();
-    return () => {
-      this.listeners.delete(listener);
-      this.onUnsubscribe();
-    };
-  }
-  hasListeners() {
-    return this.listeners.size > 0;
-  }
-  onSubscribe() {
-  }
-  onUnsubscribe() {
-  }
-};
-var isServer = typeof window === "undefined" || "Deno" in globalThis;
-function noop$1() {
-}
-function functionalUpdate(updater, input) {
-  return typeof updater === "function" ? updater(input) : updater;
-}
-function isValidTimeout(value) {
-  return typeof value === "number" && value >= 0 && value !== Infinity;
-}
-function timeUntilStale(updatedAt, staleTime) {
-  return Math.max(updatedAt + (staleTime || 0) - Date.now(), 0);
-}
-function resolveStaleTime(staleTime, query) {
-  return typeof staleTime === "function" ? staleTime(query) : staleTime;
-}
-function resolveEnabled(enabled, query) {
-  return typeof enabled === "function" ? enabled(query) : enabled;
-}
-function matchQuery(filters, query) {
-  const {
-    type = "all",
-    exact,
-    fetchStatus,
-    predicate,
-    queryKey,
-    stale
-  } = filters;
-  if (queryKey) {
-    if (exact) {
-      if (query.queryHash !== hashQueryKeyByOptions(queryKey, query.options)) {
-        return false;
-      }
-    } else if (!partialMatchKey(query.queryKey, queryKey)) {
-      return false;
-    }
-  }
-  if (type !== "all") {
-    const isActive = query.isActive();
-    if (type === "active" && !isActive) {
-      return false;
-    }
-    if (type === "inactive" && isActive) {
-      return false;
-    }
-  }
-  if (typeof stale === "boolean" && query.isStale() !== stale) {
-    return false;
-  }
-  if (fetchStatus && fetchStatus !== query.state.fetchStatus) {
-    return false;
-  }
-  if (predicate && !predicate(query)) {
-    return false;
-  }
-  return true;
-}
-function matchMutation(filters, mutation) {
-  const { exact, status, predicate, mutationKey } = filters;
-  if (mutationKey) {
-    if (!mutation.options.mutationKey) {
-      return false;
-    }
-    if (exact) {
-      if (hashKey(mutation.options.mutationKey) !== hashKey(mutationKey)) {
-        return false;
-      }
-    } else if (!partialMatchKey(mutation.options.mutationKey, mutationKey)) {
-      return false;
-    }
-  }
-  if (status && mutation.state.status !== status) {
-    return false;
-  }
-  if (predicate && !predicate(mutation)) {
-    return false;
-  }
-  return true;
-}
-function hashQueryKeyByOptions(queryKey, options) {
-  const hashFn = options?.queryKeyHashFn || hashKey;
-  return hashFn(queryKey);
-}
-function hashKey(queryKey) {
-  return JSON.stringify(
-    queryKey,
-    (_, val) => isPlainObject$1(val) ? Object.keys(val).sort().reduce((result, key) => {
-      result[key] = val[key];
-      return result;
-    }, {}) : val
-  );
-}
-function partialMatchKey(a, b) {
-  if (a === b) {
-    return true;
-  }
-  if (typeof a !== typeof b) {
-    return false;
-  }
-  if (a && b && typeof a === "object" && typeof b === "object") {
-    return Object.keys(b).every((key) => partialMatchKey(a[key], b[key]));
-  }
-  return false;
-}
-function replaceEqualDeep(a, b) {
-  if (a === b) {
-    return a;
-  }
-  const array = isPlainArray(a) && isPlainArray(b);
-  if (array || isPlainObject$1(a) && isPlainObject$1(b)) {
-    const aItems = array ? a : Object.keys(a);
-    const aSize = aItems.length;
-    const bItems = array ? b : Object.keys(b);
-    const bSize = bItems.length;
-    const copy = array ? [] : {};
-    const aItemsSet = new Set(aItems);
-    let equalItems = 0;
-    for (let i2 = 0; i2 < bSize; i2++) {
-      const key = array ? i2 : bItems[i2];
-      if ((!array && aItemsSet.has(key) || array) && a[key] === void 0 && b[key] === void 0) {
-        copy[key] = void 0;
-        equalItems++;
-      } else {
-        copy[key] = replaceEqualDeep(a[key], b[key]);
-        if (copy[key] === a[key] && a[key] !== void 0) {
-          equalItems++;
-        }
-      }
-    }
-    return aSize === bSize && equalItems === aSize ? a : copy;
-  }
-  return b;
-}
-function shallowEqualObjects(a, b) {
-  if (!b || Object.keys(a).length !== Object.keys(b).length) {
-    return false;
-  }
-  for (const key in a) {
-    if (a[key] !== b[key]) {
-      return false;
-    }
-  }
-  return true;
-}
-function isPlainArray(value) {
-  return Array.isArray(value) && value.length === Object.keys(value).length;
-}
-function isPlainObject$1(o2) {
-  if (!hasObjectPrototype(o2)) {
-    return false;
-  }
-  const ctor = o2.constructor;
-  if (ctor === void 0) {
-    return true;
-  }
-  const prot = ctor.prototype;
-  if (!hasObjectPrototype(prot)) {
-    return false;
-  }
-  if (!prot.hasOwnProperty("isPrototypeOf")) {
-    return false;
-  }
-  if (Object.getPrototypeOf(o2) !== Object.prototype) {
-    return false;
-  }
-  return true;
-}
-function hasObjectPrototype(o2) {
-  return Object.prototype.toString.call(o2) === "[object Object]";
-}
-function sleep(timeout) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, timeout);
-  });
-}
-function replaceData(prevData, data, options) {
-  if (typeof options.structuralSharing === "function") {
-    return options.structuralSharing(prevData, data);
-  } else if (options.structuralSharing !== false) {
-    return replaceEqualDeep(prevData, data);
-  }
-  return data;
-}
-function addToEnd(items, item, max2 = 0) {
-  const newItems = [...items, item];
-  return max2 && newItems.length > max2 ? newItems.slice(1) : newItems;
-}
-function addToStart(items, item, max2 = 0) {
-  const newItems = [item, ...items];
-  return max2 && newItems.length > max2 ? newItems.slice(0, -1) : newItems;
-}
-var skipToken = Symbol();
-function ensureQueryFn(options, fetchOptions) {
-  if (!options.queryFn && fetchOptions?.initialPromise) {
-    return () => fetchOptions.initialPromise;
-  }
-  if (!options.queryFn || options.queryFn === skipToken) {
-    return () => Promise.reject(new Error(`Missing queryFn: '${options.queryHash}'`));
-  }
-  return options.queryFn;
-}
-function shouldThrowError(throwOnError, params) {
-  if (typeof throwOnError === "function") {
-    return throwOnError(...params);
-  }
-  return !!throwOnError;
-}
-var FocusManager = (_a = class extends Subscribable {
-  constructor() {
-    super();
-    __privateAdd(this, _focused);
-    __privateAdd(this, _cleanup);
-    __privateAdd(this, _setup);
-    __privateSet(this, _setup, (onFocus) => {
-      if (!isServer && window.addEventListener) {
-        const listener = () => onFocus();
-        window.addEventListener("visibilitychange", listener, false);
-        return () => {
-          window.removeEventListener("visibilitychange", listener);
-        };
-      }
-      return;
-    });
-  }
-  onSubscribe() {
-    if (!__privateGet(this, _cleanup)) {
-      this.setEventListener(__privateGet(this, _setup));
-    }
-  }
-  onUnsubscribe() {
-    var _a2;
-    if (!this.hasListeners()) {
-      (_a2 = __privateGet(this, _cleanup)) == null ? void 0 : _a2.call(this);
-      __privateSet(this, _cleanup, void 0);
-    }
-  }
-  setEventListener(setup) {
-    var _a2;
-    __privateSet(this, _setup, setup);
-    (_a2 = __privateGet(this, _cleanup)) == null ? void 0 : _a2.call(this);
-    __privateSet(this, _cleanup, setup((focused) => {
-      if (typeof focused === "boolean") {
-        this.setFocused(focused);
-      } else {
-        this.onFocus();
-      }
-    }));
-  }
-  setFocused(focused) {
-    const changed = __privateGet(this, _focused) !== focused;
-    if (changed) {
-      __privateSet(this, _focused, focused);
-      this.onFocus();
-    }
-  }
-  onFocus() {
-    const isFocused = this.isFocused();
-    this.listeners.forEach((listener) => {
-      listener(isFocused);
-    });
-  }
-  isFocused() {
-    if (typeof __privateGet(this, _focused) === "boolean") {
-      return __privateGet(this, _focused);
-    }
-    return globalThis.document?.visibilityState !== "hidden";
-  }
-}, _focused = new WeakMap(), _cleanup = new WeakMap(), _setup = new WeakMap(), _a);
-var focusManager = new FocusManager();
-var OnlineManager = (_b = class extends Subscribable {
-  constructor() {
-    super();
-    __privateAdd(this, _online, true);
-    __privateAdd(this, _cleanup2);
-    __privateAdd(this, _setup2);
-    __privateSet(this, _setup2, (onOnline) => {
-      if (!isServer && window.addEventListener) {
-        const onlineListener = () => onOnline(true);
-        const offlineListener = () => onOnline(false);
-        window.addEventListener("online", onlineListener, false);
-        window.addEventListener("offline", offlineListener, false);
-        return () => {
-          window.removeEventListener("online", onlineListener);
-          window.removeEventListener("offline", offlineListener);
-        };
-      }
-      return;
-    });
-  }
-  onSubscribe() {
-    if (!__privateGet(this, _cleanup2)) {
-      this.setEventListener(__privateGet(this, _setup2));
-    }
-  }
-  onUnsubscribe() {
-    var _a2;
-    if (!this.hasListeners()) {
-      (_a2 = __privateGet(this, _cleanup2)) == null ? void 0 : _a2.call(this);
-      __privateSet(this, _cleanup2, void 0);
-    }
-  }
-  setEventListener(setup) {
-    var _a2;
-    __privateSet(this, _setup2, setup);
-    (_a2 = __privateGet(this, _cleanup2)) == null ? void 0 : _a2.call(this);
-    __privateSet(this, _cleanup2, setup(this.setOnline.bind(this)));
-  }
-  setOnline(online) {
-    const changed = __privateGet(this, _online) !== online;
-    if (changed) {
-      __privateSet(this, _online, online);
-      this.listeners.forEach((listener) => {
-        listener(online);
-      });
-    }
-  }
-  isOnline() {
-    return __privateGet(this, _online);
-  }
-}, _online = new WeakMap(), _cleanup2 = new WeakMap(), _setup2 = new WeakMap(), _b);
-var onlineManager = new OnlineManager();
-function pendingThenable() {
-  let resolve;
-  let reject;
-  const thenable = new Promise((_resolve, _reject) => {
-    resolve = _resolve;
-    reject = _reject;
-  });
-  thenable.status = "pending";
-  thenable.catch(() => {
-  });
-  function finalize(data) {
-    Object.assign(thenable, data);
-    delete thenable.resolve;
-    delete thenable.reject;
-  }
-  thenable.resolve = (value) => {
-    finalize({
-      status: "fulfilled",
-      value
-    });
-    resolve(value);
-  };
-  thenable.reject = (reason) => {
-    finalize({
-      status: "rejected",
-      reason
-    });
-    reject(reason);
-  };
-  return thenable;
-}
-function defaultRetryDelay(failureCount) {
-  return Math.min(1e3 * 2 ** failureCount, 3e4);
-}
-function canFetch(networkMode) {
-  return (networkMode ?? "online") === "online" ? onlineManager.isOnline() : true;
-}
-var CancelledError = class extends Error {
-  constructor(options) {
-    super("CancelledError");
-    this.revert = options?.revert;
-    this.silent = options?.silent;
-  }
-};
-function isCancelledError(value) {
-  return value instanceof CancelledError;
-}
-function createRetryer(config) {
-  let isRetryCancelled = false;
-  let failureCount = 0;
-  let isResolved = false;
-  let continueFn;
-  const thenable = pendingThenable();
-  const cancel = (cancelOptions) => {
-    if (!isResolved) {
-      reject(new CancelledError(cancelOptions));
-      config.abort?.();
-    }
-  };
-  const cancelRetry = () => {
-    isRetryCancelled = true;
-  };
-  const continueRetry = () => {
-    isRetryCancelled = false;
-  };
-  const canContinue = () => focusManager.isFocused() && (config.networkMode === "always" || onlineManager.isOnline()) && config.canRun();
-  const canStart = () => canFetch(config.networkMode) && config.canRun();
-  const resolve = (value) => {
-    if (!isResolved) {
-      isResolved = true;
-      config.onSuccess?.(value);
-      continueFn?.();
-      thenable.resolve(value);
-    }
-  };
-  const reject = (value) => {
-    if (!isResolved) {
-      isResolved = true;
-      config.onError?.(value);
-      continueFn?.();
-      thenable.reject(value);
-    }
-  };
-  const pause = () => {
-    return new Promise((continueResolve) => {
-      continueFn = (value) => {
-        if (isResolved || canContinue()) {
-          continueResolve(value);
-        }
-      };
-      config.onPause?.();
-    }).then(() => {
-      continueFn = void 0;
-      if (!isResolved) {
-        config.onContinue?.();
-      }
-    });
-  };
-  const run = () => {
-    if (isResolved) {
-      return;
-    }
-    let promiseOrValue;
-    const initialPromise = failureCount === 0 ? config.initialPromise : void 0;
-    try {
-      promiseOrValue = initialPromise ?? config.fn();
-    } catch (error) {
-      promiseOrValue = Promise.reject(error);
-    }
-    Promise.resolve(promiseOrValue).then(resolve).catch((error) => {
-      if (isResolved) {
-        return;
-      }
-      const retry = config.retry ?? (isServer ? 0 : 3);
-      const retryDelay = config.retryDelay ?? defaultRetryDelay;
-      const delay = typeof retryDelay === "function" ? retryDelay(failureCount, error) : retryDelay;
-      const shouldRetry = retry === true || typeof retry === "number" && failureCount < retry || typeof retry === "function" && retry(failureCount, error);
-      if (isRetryCancelled || !shouldRetry) {
-        reject(error);
-        return;
-      }
-      failureCount++;
-      config.onFail?.(failureCount, error);
-      sleep(delay).then(() => {
-        return canContinue() ? void 0 : pause();
-      }).then(() => {
-        if (isRetryCancelled) {
-          reject(error);
-        } else {
-          run();
-        }
-      });
-    });
-  };
-  return {
-    promise: thenable,
-    cancel,
-    continue: () => {
-      continueFn?.();
-      return thenable;
-    },
-    cancelRetry,
-    continueRetry,
-    canStart,
-    start: () => {
-      if (canStart()) {
-        run();
-      } else {
-        pause().then(run);
-      }
-      return thenable;
-    }
-  };
-}
-var defaultScheduler = (cb) => setTimeout(cb, 0);
-function createNotifyManager() {
-  let queue = [];
-  let transactions = 0;
-  let notifyFn = (callback) => {
-    callback();
-  };
-  let batchNotifyFn = (callback) => {
-    callback();
-  };
-  let scheduleFn = defaultScheduler;
-  const schedule = (callback) => {
-    if (transactions) {
-      queue.push(callback);
-    } else {
-      scheduleFn(() => {
-        notifyFn(callback);
-      });
-    }
-  };
-  const flush = () => {
-    const originalQueue = queue;
-    queue = [];
-    if (originalQueue.length) {
-      scheduleFn(() => {
-        batchNotifyFn(() => {
-          originalQueue.forEach((callback) => {
-            notifyFn(callback);
-          });
-        });
-      });
-    }
-  };
-  return {
-    batch: (callback) => {
-      let result;
-      transactions++;
-      try {
-        result = callback();
-      } finally {
-        transactions--;
-        if (!transactions) {
-          flush();
-        }
-      }
-      return result;
-    },
-    /**
-     * All calls to the wrapped function will be batched.
-     */
-    batchCalls: (callback) => {
-      return (...args) => {
-        schedule(() => {
-          callback(...args);
-        });
-      };
-    },
-    schedule,
-    /**
-     * Use this method to set a custom notify function.
-     * This can be used to for example wrap notifications with `React.act` while running tests.
-     */
-    setNotifyFunction: (fn) => {
-      notifyFn = fn;
-    },
-    /**
-     * Use this method to set a custom function to batch notifications together into a single tick.
-     * By default React Query will use the batch function provided by ReactDOM or React Native.
-     */
-    setBatchNotifyFunction: (fn) => {
-      batchNotifyFn = fn;
-    },
-    setScheduler: (fn) => {
-      scheduleFn = fn;
-    }
-  };
-}
-var notifyManager = createNotifyManager();
-var Removable = (_c = class {
-  constructor() {
-    __privateAdd(this, _gcTimeout);
-  }
-  destroy() {
-    this.clearGcTimeout();
-  }
-  scheduleGc() {
-    this.clearGcTimeout();
-    if (isValidTimeout(this.gcTime)) {
-      __privateSet(this, _gcTimeout, setTimeout(() => {
-        this.optionalRemove();
-      }, this.gcTime));
-    }
-  }
-  updateGcTime(newGcTime) {
-    this.gcTime = Math.max(
-      this.gcTime || 0,
-      newGcTime ?? (isServer ? Infinity : 5 * 60 * 1e3)
-    );
-  }
-  clearGcTimeout() {
-    if (__privateGet(this, _gcTimeout)) {
-      clearTimeout(__privateGet(this, _gcTimeout));
-      __privateSet(this, _gcTimeout, void 0);
-    }
-  }
-}, _gcTimeout = new WeakMap(), _c);
-var Query = (_d = class extends Removable {
-  constructor(config) {
-    super();
-    __privateAdd(this, _Query_instances);
-    __privateAdd(this, _initialState);
-    __privateAdd(this, _revertState);
-    __privateAdd(this, _cache);
-    __privateAdd(this, _client);
-    __privateAdd(this, _retryer);
-    __privateAdd(this, _defaultOptions);
-    __privateAdd(this, _abortSignalConsumed);
-    __privateSet(this, _abortSignalConsumed, false);
-    __privateSet(this, _defaultOptions, config.defaultOptions);
-    this.setOptions(config.options);
-    this.observers = [];
-    __privateSet(this, _client, config.client);
-    __privateSet(this, _cache, __privateGet(this, _client).getQueryCache());
-    this.queryKey = config.queryKey;
-    this.queryHash = config.queryHash;
-    __privateSet(this, _initialState, getDefaultState$1(this.options));
-    this.state = config.state ?? __privateGet(this, _initialState);
-    this.scheduleGc();
-  }
-  get meta() {
-    return this.options.meta;
-  }
-  get promise() {
-    return __privateGet(this, _retryer)?.promise;
-  }
-  setOptions(options) {
-    this.options = { ...__privateGet(this, _defaultOptions), ...options };
-    this.updateGcTime(this.options.gcTime);
-  }
-  optionalRemove() {
-    if (!this.observers.length && this.state.fetchStatus === "idle") {
-      __privateGet(this, _cache).remove(this);
-    }
-  }
-  setData(newData, options) {
-    const data = replaceData(this.state.data, newData, this.options);
-    __privateMethod(this, _Query_instances, dispatch_fn).call(this, {
-      data,
-      type: "success",
-      dataUpdatedAt: options?.updatedAt,
-      manual: options?.manual
-    });
-    return data;
-  }
-  setState(state, setStateOptions) {
-    __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "setState", state, setStateOptions });
-  }
-  cancel(options) {
-    const promise = __privateGet(this, _retryer)?.promise;
-    __privateGet(this, _retryer)?.cancel(options);
-    return promise ? promise.then(noop$1).catch(noop$1) : Promise.resolve();
-  }
-  destroy() {
-    super.destroy();
-    this.cancel({ silent: true });
-  }
-  reset() {
-    this.destroy();
-    this.setState(__privateGet(this, _initialState));
-  }
-  isActive() {
-    return this.observers.some(
-      (observer) => resolveEnabled(observer.options.enabled, this) !== false
-    );
-  }
-  isDisabled() {
-    if (this.getObserversCount() > 0) {
-      return !this.isActive();
-    }
-    return this.options.queryFn === skipToken || this.state.dataUpdateCount + this.state.errorUpdateCount === 0;
-  }
-  isStatic() {
-    if (this.getObserversCount() > 0) {
-      return this.observers.some(
-        (observer) => resolveStaleTime(observer.options.staleTime, this) === "static"
-      );
-    }
-    return false;
-  }
-  isStale() {
-    if (this.getObserversCount() > 0) {
-      return this.observers.some(
-        (observer) => observer.getCurrentResult().isStale
-      );
-    }
-    return this.state.data === void 0 || this.state.isInvalidated;
-  }
-  isStaleByTime(staleTime = 0) {
-    if (this.state.data === void 0) {
-      return true;
-    }
-    if (staleTime === "static") {
-      return false;
-    }
-    if (this.state.isInvalidated) {
-      return true;
-    }
-    return !timeUntilStale(this.state.dataUpdatedAt, staleTime);
-  }
-  onFocus() {
-    const observer = this.observers.find((x) => x.shouldFetchOnWindowFocus());
-    observer?.refetch({ cancelRefetch: false });
-    __privateGet(this, _retryer)?.continue();
-  }
-  onOnline() {
-    const observer = this.observers.find((x) => x.shouldFetchOnReconnect());
-    observer?.refetch({ cancelRefetch: false });
-    __privateGet(this, _retryer)?.continue();
-  }
-  addObserver(observer) {
-    if (!this.observers.includes(observer)) {
-      this.observers.push(observer);
-      this.clearGcTimeout();
-      __privateGet(this, _cache).notify({ type: "observerAdded", query: this, observer });
-    }
-  }
-  removeObserver(observer) {
-    if (this.observers.includes(observer)) {
-      this.observers = this.observers.filter((x) => x !== observer);
-      if (!this.observers.length) {
-        if (__privateGet(this, _retryer)) {
-          if (__privateGet(this, _abortSignalConsumed)) {
-            __privateGet(this, _retryer).cancel({ revert: true });
-          } else {
-            __privateGet(this, _retryer).cancelRetry();
-          }
-        }
-        this.scheduleGc();
-      }
-      __privateGet(this, _cache).notify({ type: "observerRemoved", query: this, observer });
-    }
-  }
-  getObserversCount() {
-    return this.observers.length;
-  }
-  invalidate() {
-    if (!this.state.isInvalidated) {
-      __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "invalidate" });
-    }
-  }
-  fetch(options, fetchOptions) {
-    if (this.state.fetchStatus !== "idle") {
-      if (this.state.data !== void 0 && fetchOptions?.cancelRefetch) {
-        this.cancel({ silent: true });
-      } else if (__privateGet(this, _retryer)) {
-        __privateGet(this, _retryer).continueRetry();
-        return __privateGet(this, _retryer).promise;
-      }
-    }
-    if (options) {
-      this.setOptions(options);
-    }
-    if (!this.options.queryFn) {
-      const observer = this.observers.find((x) => x.options.queryFn);
-      if (observer) {
-        this.setOptions(observer.options);
-      }
-    }
-    const abortController = new AbortController();
-    const addSignalProperty = (object) => {
-      Object.defineProperty(object, "signal", {
-        enumerable: true,
-        get: () => {
-          __privateSet(this, _abortSignalConsumed, true);
-          return abortController.signal;
-        }
-      });
-    };
-    const fetchFn = () => {
-      const queryFn = ensureQueryFn(this.options, fetchOptions);
-      const createQueryFnContext = () => {
-        const queryFnContext2 = {
-          client: __privateGet(this, _client),
-          queryKey: this.queryKey,
-          meta: this.meta
-        };
-        addSignalProperty(queryFnContext2);
-        return queryFnContext2;
-      };
-      const queryFnContext = createQueryFnContext();
-      __privateSet(this, _abortSignalConsumed, false);
-      if (this.options.persister) {
-        return this.options.persister(
-          queryFn,
-          queryFnContext,
-          this
-        );
-      }
-      return queryFn(queryFnContext);
-    };
-    const createFetchContext = () => {
-      const context2 = {
-        fetchOptions,
-        options: this.options,
-        queryKey: this.queryKey,
-        client: __privateGet(this, _client),
-        state: this.state,
-        fetchFn
-      };
-      addSignalProperty(context2);
-      return context2;
-    };
-    const context = createFetchContext();
-    this.options.behavior?.onFetch(context, this);
-    __privateSet(this, _revertState, this.state);
-    if (this.state.fetchStatus === "idle" || this.state.fetchMeta !== context.fetchOptions?.meta) {
-      __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "fetch", meta: context.fetchOptions?.meta });
-    }
-    const onError = (error) => {
-      if (!(isCancelledError(error) && error.silent)) {
-        __privateMethod(this, _Query_instances, dispatch_fn).call(this, {
-          type: "error",
-          error
-        });
-      }
-      if (!isCancelledError(error)) {
-        __privateGet(this, _cache).config.onError?.(
-          error,
-          this
-        );
-        __privateGet(this, _cache).config.onSettled?.(
-          this.state.data,
-          error,
-          this
-        );
-      }
-      this.scheduleGc();
-    };
-    __privateSet(this, _retryer, createRetryer({
-      initialPromise: fetchOptions?.initialPromise,
-      fn: context.fetchFn,
-      abort: abortController.abort.bind(abortController),
-      onSuccess: (data) => {
-        if (data === void 0) {
-          onError(new Error(`${this.queryHash} data is undefined`));
-          return;
-        }
-        try {
-          this.setData(data);
-        } catch (error) {
-          onError(error);
-          return;
-        }
-        __privateGet(this, _cache).config.onSuccess?.(data, this);
-        __privateGet(this, _cache).config.onSettled?.(
-          data,
-          this.state.error,
-          this
-        );
-        this.scheduleGc();
-      },
-      onError,
-      onFail: (failureCount, error) => {
-        __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "failed", failureCount, error });
-      },
-      onPause: () => {
-        __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "pause" });
-      },
-      onContinue: () => {
-        __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "continue" });
-      },
-      retry: context.options.retry,
-      retryDelay: context.options.retryDelay,
-      networkMode: context.options.networkMode,
-      canRun: () => true
-    }));
-    return __privateGet(this, _retryer).start();
-  }
-}, _initialState = new WeakMap(), _revertState = new WeakMap(), _cache = new WeakMap(), _client = new WeakMap(), _retryer = new WeakMap(), _defaultOptions = new WeakMap(), _abortSignalConsumed = new WeakMap(), _Query_instances = new WeakSet(), dispatch_fn = function(action) {
-  const reducer2 = (state) => {
-    switch (action.type) {
-      case "failed":
-        return {
-          ...state,
-          fetchFailureCount: action.failureCount,
-          fetchFailureReason: action.error
-        };
-      case "pause":
-        return {
-          ...state,
-          fetchStatus: "paused"
-        };
-      case "continue":
-        return {
-          ...state,
-          fetchStatus: "fetching"
-        };
-      case "fetch":
-        return {
-          ...state,
-          ...fetchState(state.data, this.options),
-          fetchMeta: action.meta ?? null
-        };
-      case "success":
-        return {
-          ...state,
-          data: action.data,
-          dataUpdateCount: state.dataUpdateCount + 1,
-          dataUpdatedAt: action.dataUpdatedAt ?? Date.now(),
-          error: null,
-          isInvalidated: false,
-          status: "success",
-          ...!action.manual && {
-            fetchStatus: "idle",
-            fetchFailureCount: 0,
-            fetchFailureReason: null
-          }
-        };
-      case "error":
-        const error = action.error;
-        if (isCancelledError(error) && error.revert && __privateGet(this, _revertState)) {
-          return { ...__privateGet(this, _revertState), fetchStatus: "idle" };
-        }
-        return {
-          ...state,
-          error,
-          errorUpdateCount: state.errorUpdateCount + 1,
-          errorUpdatedAt: Date.now(),
-          fetchFailureCount: state.fetchFailureCount + 1,
-          fetchFailureReason: error,
-          fetchStatus: "idle",
-          status: "error"
-        };
-      case "invalidate":
-        return {
-          ...state,
-          isInvalidated: true
-        };
-      case "setState":
-        return {
-          ...state,
-          ...action.state
-        };
-    }
-  };
-  this.state = reducer2(this.state);
-  notifyManager.batch(() => {
-    this.observers.forEach((observer) => {
-      observer.onQueryUpdate();
-    });
-    __privateGet(this, _cache).notify({ query: this, type: "updated", action });
-  });
-}, _d);
-function fetchState(data, options) {
-  return {
-    fetchFailureCount: 0,
-    fetchFailureReason: null,
-    fetchStatus: canFetch(options.networkMode) ? "fetching" : "paused",
-    ...data === void 0 && {
-      error: null,
-      status: "pending"
-    }
-  };
-}
-function getDefaultState$1(options) {
-  const data = typeof options.initialData === "function" ? options.initialData() : options.initialData;
-  const hasData = data !== void 0;
-  const initialDataUpdatedAt = hasData ? typeof options.initialDataUpdatedAt === "function" ? options.initialDataUpdatedAt() : options.initialDataUpdatedAt : 0;
-  return {
-    data,
-    dataUpdateCount: 0,
-    dataUpdatedAt: hasData ? initialDataUpdatedAt ?? Date.now() : 0,
-    error: null,
-    errorUpdateCount: 0,
-    errorUpdatedAt: 0,
-    fetchFailureCount: 0,
-    fetchFailureReason: null,
-    fetchMeta: null,
-    isInvalidated: false,
-    status: hasData ? "success" : "pending",
-    fetchStatus: "idle"
-  };
-}
-var QueryCache = (_e = class extends Subscribable {
-  constructor(config = {}) {
-    super();
-    __privateAdd(this, _queries);
-    this.config = config;
-    __privateSet(this, _queries, /* @__PURE__ */ new Map());
-  }
-  build(client2, options, state) {
-    const queryKey = options.queryKey;
-    const queryHash = options.queryHash ?? hashQueryKeyByOptions(queryKey, options);
-    let query = this.get(queryHash);
-    if (!query) {
-      query = new Query({
-        client: client2,
-        queryKey,
-        queryHash,
-        options: client2.defaultQueryOptions(options),
-        state,
-        defaultOptions: client2.getQueryDefaults(queryKey)
-      });
-      this.add(query);
-    }
-    return query;
-  }
-  add(query) {
-    if (!__privateGet(this, _queries).has(query.queryHash)) {
-      __privateGet(this, _queries).set(query.queryHash, query);
-      this.notify({
-        type: "added",
-        query
-      });
-    }
-  }
-  remove(query) {
-    const queryInMap = __privateGet(this, _queries).get(query.queryHash);
-    if (queryInMap) {
-      query.destroy();
-      if (queryInMap === query) {
-        __privateGet(this, _queries).delete(query.queryHash);
-      }
-      this.notify({ type: "removed", query });
-    }
-  }
-  clear() {
-    notifyManager.batch(() => {
-      this.getAll().forEach((query) => {
-        this.remove(query);
-      });
-    });
-  }
-  get(queryHash) {
-    return __privateGet(this, _queries).get(queryHash);
-  }
-  getAll() {
-    return [...__privateGet(this, _queries).values()];
-  }
-  find(filters) {
-    const defaultedFilters = { exact: true, ...filters };
-    return this.getAll().find(
-      (query) => matchQuery(defaultedFilters, query)
-    );
-  }
-  findAll(filters = {}) {
-    const queries = this.getAll();
-    return Object.keys(filters).length > 0 ? queries.filter((query) => matchQuery(filters, query)) : queries;
-  }
-  notify(event) {
-    notifyManager.batch(() => {
-      this.listeners.forEach((listener) => {
-        listener(event);
-      });
-    });
-  }
-  onFocus() {
-    notifyManager.batch(() => {
-      this.getAll().forEach((query) => {
-        query.onFocus();
-      });
-    });
-  }
-  onOnline() {
-    notifyManager.batch(() => {
-      this.getAll().forEach((query) => {
-        query.onOnline();
-      });
-    });
-  }
-}, _queries = new WeakMap(), _e);
-var Mutation = (_f = class extends Removable {
-  constructor(config) {
-    super();
-    __privateAdd(this, _Mutation_instances);
-    __privateAdd(this, _observers);
-    __privateAdd(this, _mutationCache);
-    __privateAdd(this, _retryer2);
-    this.mutationId = config.mutationId;
-    __privateSet(this, _mutationCache, config.mutationCache);
-    __privateSet(this, _observers, []);
-    this.state = config.state || getDefaultState();
-    this.setOptions(config.options);
-    this.scheduleGc();
-  }
-  setOptions(options) {
-    this.options = options;
-    this.updateGcTime(this.options.gcTime);
-  }
-  get meta() {
-    return this.options.meta;
-  }
-  addObserver(observer) {
-    if (!__privateGet(this, _observers).includes(observer)) {
-      __privateGet(this, _observers).push(observer);
-      this.clearGcTimeout();
-      __privateGet(this, _mutationCache).notify({
-        type: "observerAdded",
-        mutation: this,
-        observer
-      });
-    }
-  }
-  removeObserver(observer) {
-    __privateSet(this, _observers, __privateGet(this, _observers).filter((x) => x !== observer));
-    this.scheduleGc();
-    __privateGet(this, _mutationCache).notify({
-      type: "observerRemoved",
-      mutation: this,
-      observer
-    });
-  }
-  optionalRemove() {
-    if (!__privateGet(this, _observers).length) {
-      if (this.state.status === "pending") {
-        this.scheduleGc();
-      } else {
-        __privateGet(this, _mutationCache).remove(this);
-      }
-    }
-  }
-  continue() {
-    return __privateGet(this, _retryer2)?.continue() ?? // continuing a mutation assumes that variables are set, mutation must have been dehydrated before
-    this.execute(this.state.variables);
-  }
-  async execute(variables) {
-    const onContinue = () => {
-      __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "continue" });
-    };
-    __privateSet(this, _retryer2, createRetryer({
-      fn: () => {
-        if (!this.options.mutationFn) {
-          return Promise.reject(new Error("No mutationFn found"));
-        }
-        return this.options.mutationFn(variables);
-      },
-      onFail: (failureCount, error) => {
-        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "failed", failureCount, error });
-      },
-      onPause: () => {
-        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "pause" });
-      },
-      onContinue,
-      retry: this.options.retry ?? 0,
-      retryDelay: this.options.retryDelay,
-      networkMode: this.options.networkMode,
-      canRun: () => __privateGet(this, _mutationCache).canRun(this)
-    }));
-    const restored = this.state.status === "pending";
-    const isPaused = !__privateGet(this, _retryer2).canStart();
-    try {
-      if (restored) {
-        onContinue();
-      } else {
-        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "pending", variables, isPaused });
-        await __privateGet(this, _mutationCache).config.onMutate?.(
-          variables,
-          this
-        );
-        const context = await this.options.onMutate?.(variables);
-        if (context !== this.state.context) {
-          __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, {
-            type: "pending",
-            context,
-            variables,
-            isPaused
-          });
-        }
-      }
-      const data = await __privateGet(this, _retryer2).start();
-      await __privateGet(this, _mutationCache).config.onSuccess?.(
-        data,
-        variables,
-        this.state.context,
-        this
-      );
-      await this.options.onSuccess?.(data, variables, this.state.context);
-      await __privateGet(this, _mutationCache).config.onSettled?.(
-        data,
-        null,
-        this.state.variables,
-        this.state.context,
-        this
-      );
-      await this.options.onSettled?.(data, null, variables, this.state.context);
-      __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "success", data });
-      return data;
-    } catch (error) {
-      try {
-        await __privateGet(this, _mutationCache).config.onError?.(
-          error,
-          variables,
-          this.state.context,
-          this
-        );
-        await this.options.onError?.(
-          error,
-          variables,
-          this.state.context
-        );
-        await __privateGet(this, _mutationCache).config.onSettled?.(
-          void 0,
-          error,
-          this.state.variables,
-          this.state.context,
-          this
-        );
-        await this.options.onSettled?.(
-          void 0,
-          error,
-          variables,
-          this.state.context
-        );
-        throw error;
-      } finally {
-        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "error", error });
-      }
-    } finally {
-      __privateGet(this, _mutationCache).runNext(this);
-    }
-  }
-}, _observers = new WeakMap(), _mutationCache = new WeakMap(), _retryer2 = new WeakMap(), _Mutation_instances = new WeakSet(), dispatch_fn2 = function(action) {
-  const reducer2 = (state) => {
-    switch (action.type) {
-      case "failed":
-        return {
-          ...state,
-          failureCount: action.failureCount,
-          failureReason: action.error
-        };
-      case "pause":
-        return {
-          ...state,
-          isPaused: true
-        };
-      case "continue":
-        return {
-          ...state,
-          isPaused: false
-        };
-      case "pending":
-        return {
-          ...state,
-          context: action.context,
-          data: void 0,
-          failureCount: 0,
-          failureReason: null,
-          error: null,
-          isPaused: action.isPaused,
-          status: "pending",
-          variables: action.variables,
-          submittedAt: Date.now()
-        };
-      case "success":
-        return {
-          ...state,
-          data: action.data,
-          failureCount: 0,
-          failureReason: null,
-          error: null,
-          status: "success",
-          isPaused: false
-        };
-      case "error":
-        return {
-          ...state,
-          data: void 0,
-          error: action.error,
-          failureCount: state.failureCount + 1,
-          failureReason: action.error,
-          isPaused: false,
-          status: "error"
-        };
-    }
-  };
-  this.state = reducer2(this.state);
-  notifyManager.batch(() => {
-    __privateGet(this, _observers).forEach((observer) => {
-      observer.onMutationUpdate(action);
-    });
-    __privateGet(this, _mutationCache).notify({
-      mutation: this,
-      type: "updated",
-      action
-    });
-  });
-}, _f);
-function getDefaultState() {
-  return {
-    context: void 0,
-    data: void 0,
-    error: null,
-    failureCount: 0,
-    failureReason: null,
-    isPaused: false,
-    status: "idle",
-    variables: void 0,
-    submittedAt: 0
-  };
-}
-var MutationCache = (_g = class extends Subscribable {
-  constructor(config = {}) {
-    super();
-    __privateAdd(this, _mutations);
-    __privateAdd(this, _scopes);
-    __privateAdd(this, _mutationId);
-    this.config = config;
-    __privateSet(this, _mutations, /* @__PURE__ */ new Set());
-    __privateSet(this, _scopes, /* @__PURE__ */ new Map());
-    __privateSet(this, _mutationId, 0);
-  }
-  build(client2, options, state) {
-    const mutation = new Mutation({
-      mutationCache: this,
-      mutationId: ++__privateWrapper(this, _mutationId)._,
-      options: client2.defaultMutationOptions(options),
-      state
-    });
-    this.add(mutation);
-    return mutation;
-  }
-  add(mutation) {
-    __privateGet(this, _mutations).add(mutation);
-    const scope = scopeFor(mutation);
-    if (typeof scope === "string") {
-      const scopedMutations = __privateGet(this, _scopes).get(scope);
-      if (scopedMutations) {
-        scopedMutations.push(mutation);
-      } else {
-        __privateGet(this, _scopes).set(scope, [mutation]);
-      }
-    }
-    this.notify({ type: "added", mutation });
-  }
-  remove(mutation) {
-    if (__privateGet(this, _mutations).delete(mutation)) {
-      const scope = scopeFor(mutation);
-      if (typeof scope === "string") {
-        const scopedMutations = __privateGet(this, _scopes).get(scope);
-        if (scopedMutations) {
-          if (scopedMutations.length > 1) {
-            const index2 = scopedMutations.indexOf(mutation);
-            if (index2 !== -1) {
-              scopedMutations.splice(index2, 1);
-            }
-          } else if (scopedMutations[0] === mutation) {
-            __privateGet(this, _scopes).delete(scope);
-          }
-        }
-      }
-    }
-    this.notify({ type: "removed", mutation });
-  }
-  canRun(mutation) {
-    const scope = scopeFor(mutation);
-    if (typeof scope === "string") {
-      const mutationsWithSameScope = __privateGet(this, _scopes).get(scope);
-      const firstPendingMutation = mutationsWithSameScope?.find(
-        (m2) => m2.state.status === "pending"
-      );
-      return !firstPendingMutation || firstPendingMutation === mutation;
-    } else {
-      return true;
-    }
-  }
-  runNext(mutation) {
-    const scope = scopeFor(mutation);
-    if (typeof scope === "string") {
-      const foundMutation = __privateGet(this, _scopes).get(scope)?.find((m2) => m2 !== mutation && m2.state.isPaused);
-      return foundMutation?.continue() ?? Promise.resolve();
-    } else {
-      return Promise.resolve();
-    }
-  }
-  clear() {
-    notifyManager.batch(() => {
-      __privateGet(this, _mutations).forEach((mutation) => {
-        this.notify({ type: "removed", mutation });
-      });
-      __privateGet(this, _mutations).clear();
-      __privateGet(this, _scopes).clear();
-    });
-  }
-  getAll() {
-    return Array.from(__privateGet(this, _mutations));
-  }
-  find(filters) {
-    const defaultedFilters = { exact: true, ...filters };
-    return this.getAll().find(
-      (mutation) => matchMutation(defaultedFilters, mutation)
-    );
-  }
-  findAll(filters = {}) {
-    return this.getAll().filter((mutation) => matchMutation(filters, mutation));
-  }
-  notify(event) {
-    notifyManager.batch(() => {
-      this.listeners.forEach((listener) => {
-        listener(event);
-      });
-    });
-  }
-  resumePausedMutations() {
-    const pausedMutations = this.getAll().filter((x) => x.state.isPaused);
-    return notifyManager.batch(
-      () => Promise.all(
-        pausedMutations.map((mutation) => mutation.continue().catch(noop$1))
-      )
-    );
-  }
-}, _mutations = new WeakMap(), _scopes = new WeakMap(), _mutationId = new WeakMap(), _g);
-function scopeFor(mutation) {
-  return mutation.options.scope?.id;
-}
-function infiniteQueryBehavior(pages) {
-  return {
-    onFetch: (context, query) => {
-      const options = context.options;
-      const direction = context.fetchOptions?.meta?.fetchMore?.direction;
-      const oldPages = context.state.data?.pages || [];
-      const oldPageParams = context.state.data?.pageParams || [];
-      let result = { pages: [], pageParams: [] };
-      let currentPage = 0;
-      const fetchFn = async () => {
-        let cancelled = false;
-        const addSignalProperty = (object) => {
-          Object.defineProperty(object, "signal", {
-            enumerable: true,
-            get: () => {
-              if (context.signal.aborted) {
-                cancelled = true;
-              } else {
-                context.signal.addEventListener("abort", () => {
-                  cancelled = true;
-                });
-              }
-              return context.signal;
-            }
-          });
-        };
-        const queryFn = ensureQueryFn(context.options, context.fetchOptions);
-        const fetchPage = async (data, param, previous) => {
-          if (cancelled) {
-            return Promise.reject();
-          }
-          if (param == null && data.pages.length) {
-            return Promise.resolve(data);
-          }
-          const createQueryFnContext = () => {
-            const queryFnContext2 = {
-              client: context.client,
-              queryKey: context.queryKey,
-              pageParam: param,
-              direction: previous ? "backward" : "forward",
-              meta: context.options.meta
-            };
-            addSignalProperty(queryFnContext2);
-            return queryFnContext2;
-          };
-          const queryFnContext = createQueryFnContext();
-          const page = await queryFn(queryFnContext);
-          const { maxPages } = context.options;
-          const addTo = previous ? addToStart : addToEnd;
-          return {
-            pages: addTo(data.pages, page, maxPages),
-            pageParams: addTo(data.pageParams, param, maxPages)
-          };
-        };
-        if (direction && oldPages.length) {
-          const previous = direction === "backward";
-          const pageParamFn = previous ? getPreviousPageParam : getNextPageParam;
-          const oldData = {
-            pages: oldPages,
-            pageParams: oldPageParams
-          };
-          const param = pageParamFn(options, oldData);
-          result = await fetchPage(oldData, param, previous);
-        } else {
-          const remainingPages = pages ?? oldPages.length;
-          do {
-            const param = currentPage === 0 ? oldPageParams[0] ?? options.initialPageParam : getNextPageParam(options, result);
-            if (currentPage > 0 && param == null) {
-              break;
-            }
-            result = await fetchPage(result, param);
-            currentPage++;
-          } while (currentPage < remainingPages);
-        }
-        return result;
-      };
-      if (context.options.persister) {
-        context.fetchFn = () => {
-          return context.options.persister?.(
-            fetchFn,
-            {
-              client: context.client,
-              queryKey: context.queryKey,
-              meta: context.options.meta,
-              signal: context.signal
-            },
-            query
-          );
-        };
-      } else {
-        context.fetchFn = fetchFn;
-      }
-    }
-  };
-}
-function getNextPageParam(options, { pages, pageParams }) {
-  const lastIndex = pages.length - 1;
-  return pages.length > 0 ? options.getNextPageParam(
-    pages[lastIndex],
-    pages,
-    pageParams[lastIndex],
-    pageParams
-  ) : void 0;
-}
-function getPreviousPageParam(options, { pages, pageParams }) {
-  return pages.length > 0 ? options.getPreviousPageParam?.(pages[0], pages, pageParams[0], pageParams) : void 0;
-}
-var QueryClient = (_h = class {
-  constructor(config = {}) {
-    __privateAdd(this, _queryCache);
-    __privateAdd(this, _mutationCache2);
-    __privateAdd(this, _defaultOptions2);
-    __privateAdd(this, _queryDefaults);
-    __privateAdd(this, _mutationDefaults);
-    __privateAdd(this, _mountCount);
-    __privateAdd(this, _unsubscribeFocus);
-    __privateAdd(this, _unsubscribeOnline);
-    __privateSet(this, _queryCache, config.queryCache || new QueryCache());
-    __privateSet(this, _mutationCache2, config.mutationCache || new MutationCache());
-    __privateSet(this, _defaultOptions2, config.defaultOptions || {});
-    __privateSet(this, _queryDefaults, /* @__PURE__ */ new Map());
-    __privateSet(this, _mutationDefaults, /* @__PURE__ */ new Map());
-    __privateSet(this, _mountCount, 0);
-  }
-  mount() {
-    __privateWrapper(this, _mountCount)._++;
-    if (__privateGet(this, _mountCount) !== 1) return;
-    __privateSet(this, _unsubscribeFocus, focusManager.subscribe(async (focused) => {
-      if (focused) {
-        await this.resumePausedMutations();
-        __privateGet(this, _queryCache).onFocus();
-      }
-    }));
-    __privateSet(this, _unsubscribeOnline, onlineManager.subscribe(async (online) => {
-      if (online) {
-        await this.resumePausedMutations();
-        __privateGet(this, _queryCache).onOnline();
-      }
-    }));
-  }
-  unmount() {
-    var _a2, _b2;
-    __privateWrapper(this, _mountCount)._--;
-    if (__privateGet(this, _mountCount) !== 0) return;
-    (_a2 = __privateGet(this, _unsubscribeFocus)) == null ? void 0 : _a2.call(this);
-    __privateSet(this, _unsubscribeFocus, void 0);
-    (_b2 = __privateGet(this, _unsubscribeOnline)) == null ? void 0 : _b2.call(this);
-    __privateSet(this, _unsubscribeOnline, void 0);
-  }
-  isFetching(filters) {
-    return __privateGet(this, _queryCache).findAll({ ...filters, fetchStatus: "fetching" }).length;
-  }
-  isMutating(filters) {
-    return __privateGet(this, _mutationCache2).findAll({ ...filters, status: "pending" }).length;
-  }
-  /**
-   * Imperative (non-reactive) way to retrieve data for a QueryKey.
-   * Should only be used in callbacks or functions where reading the latest data is necessary, e.g. for optimistic updates.
-   *
-   * Hint: Do not use this function inside a component, because it won't receive updates.
-   * Use `useQuery` to create a `QueryObserver` that subscribes to changes.
-   */
-  getQueryData(queryKey) {
-    const options = this.defaultQueryOptions({ queryKey });
-    return __privateGet(this, _queryCache).get(options.queryHash)?.state.data;
-  }
-  ensureQueryData(options) {
-    const defaultedOptions = this.defaultQueryOptions(options);
-    const query = __privateGet(this, _queryCache).build(this, defaultedOptions);
-    const cachedData = query.state.data;
-    if (cachedData === void 0) {
-      return this.fetchQuery(options);
-    }
-    if (options.revalidateIfStale && query.isStaleByTime(resolveStaleTime(defaultedOptions.staleTime, query))) {
-      void this.prefetchQuery(defaultedOptions);
-    }
-    return Promise.resolve(cachedData);
-  }
-  getQueriesData(filters) {
-    return __privateGet(this, _queryCache).findAll(filters).map(({ queryKey, state }) => {
-      const data = state.data;
-      return [queryKey, data];
-    });
-  }
-  setQueryData(queryKey, updater, options) {
-    const defaultedOptions = this.defaultQueryOptions({ queryKey });
-    const query = __privateGet(this, _queryCache).get(
-      defaultedOptions.queryHash
-    );
-    const prevData = query?.state.data;
-    const data = functionalUpdate(updater, prevData);
-    if (data === void 0) {
-      return void 0;
-    }
-    return __privateGet(this, _queryCache).build(this, defaultedOptions).setData(data, { ...options, manual: true });
-  }
-  setQueriesData(filters, updater, options) {
-    return notifyManager.batch(
-      () => __privateGet(this, _queryCache).findAll(filters).map(({ queryKey }) => [
-        queryKey,
-        this.setQueryData(queryKey, updater, options)
-      ])
-    );
-  }
-  getQueryState(queryKey) {
-    const options = this.defaultQueryOptions({ queryKey });
-    return __privateGet(this, _queryCache).get(
-      options.queryHash
-    )?.state;
-  }
-  removeQueries(filters) {
-    const queryCache = __privateGet(this, _queryCache);
-    notifyManager.batch(() => {
-      queryCache.findAll(filters).forEach((query) => {
-        queryCache.remove(query);
-      });
-    });
-  }
-  resetQueries(filters, options) {
-    const queryCache = __privateGet(this, _queryCache);
-    return notifyManager.batch(() => {
-      queryCache.findAll(filters).forEach((query) => {
-        query.reset();
-      });
-      return this.refetchQueries(
-        {
-          type: "active",
-          ...filters
-        },
-        options
-      );
-    });
-  }
-  cancelQueries(filters, cancelOptions = {}) {
-    const defaultedCancelOptions = { revert: true, ...cancelOptions };
-    const promises = notifyManager.batch(
-      () => __privateGet(this, _queryCache).findAll(filters).map((query) => query.cancel(defaultedCancelOptions))
-    );
-    return Promise.all(promises).then(noop$1).catch(noop$1);
-  }
-  invalidateQueries(filters, options = {}) {
-    return notifyManager.batch(() => {
-      __privateGet(this, _queryCache).findAll(filters).forEach((query) => {
-        query.invalidate();
-      });
-      if (filters?.refetchType === "none") {
-        return Promise.resolve();
-      }
-      return this.refetchQueries(
-        {
-          ...filters,
-          type: filters?.refetchType ?? filters?.type ?? "active"
-        },
-        options
-      );
-    });
-  }
-  refetchQueries(filters, options = {}) {
-    const fetchOptions = {
-      ...options,
-      cancelRefetch: options.cancelRefetch ?? true
-    };
-    const promises = notifyManager.batch(
-      () => __privateGet(this, _queryCache).findAll(filters).filter((query) => !query.isDisabled() && !query.isStatic()).map((query) => {
-        let promise = query.fetch(void 0, fetchOptions);
-        if (!fetchOptions.throwOnError) {
-          promise = promise.catch(noop$1);
-        }
-        return query.state.fetchStatus === "paused" ? Promise.resolve() : promise;
-      })
-    );
-    return Promise.all(promises).then(noop$1);
-  }
-  fetchQuery(options) {
-    const defaultedOptions = this.defaultQueryOptions(options);
-    if (defaultedOptions.retry === void 0) {
-      defaultedOptions.retry = false;
-    }
-    const query = __privateGet(this, _queryCache).build(this, defaultedOptions);
-    return query.isStaleByTime(
-      resolveStaleTime(defaultedOptions.staleTime, query)
-    ) ? query.fetch(defaultedOptions) : Promise.resolve(query.state.data);
-  }
-  prefetchQuery(options) {
-    return this.fetchQuery(options).then(noop$1).catch(noop$1);
-  }
-  fetchInfiniteQuery(options) {
-    options.behavior = infiniteQueryBehavior(options.pages);
-    return this.fetchQuery(options);
-  }
-  prefetchInfiniteQuery(options) {
-    return this.fetchInfiniteQuery(options).then(noop$1).catch(noop$1);
-  }
-  ensureInfiniteQueryData(options) {
-    options.behavior = infiniteQueryBehavior(options.pages);
-    return this.ensureQueryData(options);
-  }
-  resumePausedMutations() {
-    if (onlineManager.isOnline()) {
-      return __privateGet(this, _mutationCache2).resumePausedMutations();
-    }
-    return Promise.resolve();
-  }
-  getQueryCache() {
-    return __privateGet(this, _queryCache);
-  }
-  getMutationCache() {
-    return __privateGet(this, _mutationCache2);
-  }
-  getDefaultOptions() {
-    return __privateGet(this, _defaultOptions2);
-  }
-  setDefaultOptions(options) {
-    __privateSet(this, _defaultOptions2, options);
-  }
-  setQueryDefaults(queryKey, options) {
-    __privateGet(this, _queryDefaults).set(hashKey(queryKey), {
-      queryKey,
-      defaultOptions: options
-    });
-  }
-  getQueryDefaults(queryKey) {
-    const defaults = [...__privateGet(this, _queryDefaults).values()];
-    const result = {};
-    defaults.forEach((queryDefault) => {
-      if (partialMatchKey(queryKey, queryDefault.queryKey)) {
-        Object.assign(result, queryDefault.defaultOptions);
-      }
-    });
-    return result;
-  }
-  setMutationDefaults(mutationKey, options) {
-    __privateGet(this, _mutationDefaults).set(hashKey(mutationKey), {
-      mutationKey,
-      defaultOptions: options
-    });
-  }
-  getMutationDefaults(mutationKey) {
-    const defaults = [...__privateGet(this, _mutationDefaults).values()];
-    const result = {};
-    defaults.forEach((queryDefault) => {
-      if (partialMatchKey(mutationKey, queryDefault.mutationKey)) {
-        Object.assign(result, queryDefault.defaultOptions);
-      }
-    });
-    return result;
-  }
-  defaultQueryOptions(options) {
-    if (options._defaulted) {
-      return options;
-    }
-    const defaultedOptions = {
-      ...__privateGet(this, _defaultOptions2).queries,
-      ...this.getQueryDefaults(options.queryKey),
-      ...options,
-      _defaulted: true
-    };
-    if (!defaultedOptions.queryHash) {
-      defaultedOptions.queryHash = hashQueryKeyByOptions(
-        defaultedOptions.queryKey,
-        defaultedOptions
-      );
-    }
-    if (defaultedOptions.refetchOnReconnect === void 0) {
-      defaultedOptions.refetchOnReconnect = defaultedOptions.networkMode !== "always";
-    }
-    if (defaultedOptions.throwOnError === void 0) {
-      defaultedOptions.throwOnError = !!defaultedOptions.suspense;
-    }
-    if (!defaultedOptions.networkMode && defaultedOptions.persister) {
-      defaultedOptions.networkMode = "offlineFirst";
-    }
-    if (defaultedOptions.queryFn === skipToken) {
-      defaultedOptions.enabled = false;
-    }
-    return defaultedOptions;
-  }
-  defaultMutationOptions(options) {
-    if (options?._defaulted) {
-      return options;
-    }
-    return {
-      ...__privateGet(this, _defaultOptions2).mutations,
-      ...options?.mutationKey && this.getMutationDefaults(options.mutationKey),
-      ...options,
-      _defaulted: true
-    };
-  }
-  clear() {
-    __privateGet(this, _queryCache).clear();
-    __privateGet(this, _mutationCache2).clear();
-  }
-}, _queryCache = new WeakMap(), _mutationCache2 = new WeakMap(), _defaultOptions2 = new WeakMap(), _queryDefaults = new WeakMap(), _mutationDefaults = new WeakMap(), _mountCount = new WeakMap(), _unsubscribeFocus = new WeakMap(), _unsubscribeOnline = new WeakMap(), _h);
-var QueryObserver = (_i = class extends Subscribable {
-  constructor(client2, options) {
-    super();
-    __privateAdd(this, _QueryObserver_instances);
-    __privateAdd(this, _client2);
-    __privateAdd(this, _currentQuery);
-    __privateAdd(this, _currentQueryInitialState);
-    __privateAdd(this, _currentResult);
-    __privateAdd(this, _currentResultState);
-    __privateAdd(this, _currentResultOptions);
-    __privateAdd(this, _currentThenable);
-    __privateAdd(this, _selectError);
-    __privateAdd(this, _selectFn);
-    __privateAdd(this, _selectResult);
-    // This property keeps track of the last query with defined data.
-    // It will be used to pass the previous data and query to the placeholder function between renders.
-    __privateAdd(this, _lastQueryWithDefinedData);
-    __privateAdd(this, _staleTimeoutId);
-    __privateAdd(this, _refetchIntervalId);
-    __privateAdd(this, _currentRefetchInterval);
-    __privateAdd(this, _trackedProps, /* @__PURE__ */ new Set());
-    this.options = options;
-    __privateSet(this, _client2, client2);
-    __privateSet(this, _selectError, null);
-    __privateSet(this, _currentThenable, pendingThenable());
-    if (!this.options.experimental_prefetchInRender) {
-      __privateGet(this, _currentThenable).reject(
-        new Error("experimental_prefetchInRender feature flag is not enabled")
-      );
-    }
-    this.bindMethods();
-    this.setOptions(options);
-  }
-  bindMethods() {
-    this.refetch = this.refetch.bind(this);
-  }
-  onSubscribe() {
-    if (this.listeners.size === 1) {
-      __privateGet(this, _currentQuery).addObserver(this);
-      if (shouldFetchOnMount(__privateGet(this, _currentQuery), this.options)) {
-        __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this);
-      } else {
-        this.updateResult();
-      }
-      __privateMethod(this, _QueryObserver_instances, updateTimers_fn).call(this);
-    }
-  }
-  onUnsubscribe() {
-    if (!this.hasListeners()) {
-      this.destroy();
-    }
-  }
-  shouldFetchOnReconnect() {
-    return shouldFetchOn(
-      __privateGet(this, _currentQuery),
-      this.options,
-      this.options.refetchOnReconnect
-    );
-  }
-  shouldFetchOnWindowFocus() {
-    return shouldFetchOn(
-      __privateGet(this, _currentQuery),
-      this.options,
-      this.options.refetchOnWindowFocus
-    );
-  }
-  destroy() {
-    this.listeners = /* @__PURE__ */ new Set();
-    __privateMethod(this, _QueryObserver_instances, clearStaleTimeout_fn).call(this);
-    __privateMethod(this, _QueryObserver_instances, clearRefetchInterval_fn).call(this);
-    __privateGet(this, _currentQuery).removeObserver(this);
-  }
-  setOptions(options) {
-    const prevOptions = this.options;
-    const prevQuery = __privateGet(this, _currentQuery);
-    this.options = __privateGet(this, _client2).defaultQueryOptions(options);
-    if (this.options.enabled !== void 0 && typeof this.options.enabled !== "boolean" && typeof this.options.enabled !== "function" && typeof resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== "boolean") {
-      throw new Error(
-        "Expected enabled to be a boolean or a callback that returns a boolean"
-      );
-    }
-    __privateMethod(this, _QueryObserver_instances, updateQuery_fn).call(this);
-    __privateGet(this, _currentQuery).setOptions(this.options);
-    if (prevOptions._defaulted && !shallowEqualObjects(this.options, prevOptions)) {
-      __privateGet(this, _client2).getQueryCache().notify({
-        type: "observerOptionsUpdated",
-        query: __privateGet(this, _currentQuery),
-        observer: this
-      });
-    }
-    const mounted = this.hasListeners();
-    if (mounted && shouldFetchOptionally(
-      __privateGet(this, _currentQuery),
-      prevQuery,
-      this.options,
-      prevOptions
-    )) {
-      __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this);
-    }
-    this.updateResult();
-    if (mounted && (__privateGet(this, _currentQuery) !== prevQuery || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== resolveEnabled(prevOptions.enabled, __privateGet(this, _currentQuery)) || resolveStaleTime(this.options.staleTime, __privateGet(this, _currentQuery)) !== resolveStaleTime(prevOptions.staleTime, __privateGet(this, _currentQuery)))) {
-      __privateMethod(this, _QueryObserver_instances, updateStaleTimeout_fn).call(this);
-    }
-    const nextRefetchInterval = __privateMethod(this, _QueryObserver_instances, computeRefetchInterval_fn).call(this);
-    if (mounted && (__privateGet(this, _currentQuery) !== prevQuery || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== resolveEnabled(prevOptions.enabled, __privateGet(this, _currentQuery)) || nextRefetchInterval !== __privateGet(this, _currentRefetchInterval))) {
-      __privateMethod(this, _QueryObserver_instances, updateRefetchInterval_fn).call(this, nextRefetchInterval);
-    }
-  }
-  getOptimisticResult(options) {
-    const query = __privateGet(this, _client2).getQueryCache().build(__privateGet(this, _client2), options);
-    const result = this.createResult(query, options);
-    if (shouldAssignObserverCurrentProperties(this, result)) {
-      __privateSet(this, _currentResult, result);
-      __privateSet(this, _currentResultOptions, this.options);
-      __privateSet(this, _currentResultState, __privateGet(this, _currentQuery).state);
-    }
-    return result;
-  }
-  getCurrentResult() {
-    return __privateGet(this, _currentResult);
-  }
-  trackResult(result, onPropTracked) {
-    return new Proxy(result, {
-      get: (target, key) => {
-        this.trackProp(key);
-        onPropTracked?.(key);
-        return Reflect.get(target, key);
-      }
-    });
-  }
-  trackProp(key) {
-    __privateGet(this, _trackedProps).add(key);
-  }
-  getCurrentQuery() {
-    return __privateGet(this, _currentQuery);
-  }
-  refetch({ ...options } = {}) {
-    return this.fetch({
-      ...options
-    });
-  }
-  fetchOptimistic(options) {
-    const defaultedOptions = __privateGet(this, _client2).defaultQueryOptions(options);
-    const query = __privateGet(this, _client2).getQueryCache().build(__privateGet(this, _client2), defaultedOptions);
-    return query.fetch().then(() => this.createResult(query, defaultedOptions));
-  }
-  fetch(fetchOptions) {
-    return __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this, {
-      ...fetchOptions,
-      cancelRefetch: fetchOptions.cancelRefetch ?? true
-    }).then(() => {
-      this.updateResult();
-      return __privateGet(this, _currentResult);
-    });
-  }
-  createResult(query, options) {
-    const prevQuery = __privateGet(this, _currentQuery);
-    const prevOptions = this.options;
-    const prevResult = __privateGet(this, _currentResult);
-    const prevResultState = __privateGet(this, _currentResultState);
-    const prevResultOptions = __privateGet(this, _currentResultOptions);
-    const queryChange = query !== prevQuery;
-    const queryInitialState = queryChange ? query.state : __privateGet(this, _currentQueryInitialState);
-    const { state } = query;
-    let newState = { ...state };
-    let isPlaceholderData = false;
-    let data;
-    if (options._optimisticResults) {
-      const mounted = this.hasListeners();
-      const fetchOnMount = !mounted && shouldFetchOnMount(query, options);
-      const fetchOptionally = mounted && shouldFetchOptionally(query, prevQuery, options, prevOptions);
-      if (fetchOnMount || fetchOptionally) {
-        newState = {
-          ...newState,
-          ...fetchState(state.data, query.options)
-        };
-      }
-      if (options._optimisticResults === "isRestoring") {
-        newState.fetchStatus = "idle";
-      }
-    }
-    let { error, errorUpdatedAt, status } = newState;
-    data = newState.data;
-    let skipSelect = false;
-    if (options.placeholderData !== void 0 && data === void 0 && status === "pending") {
-      let placeholderData;
-      if (prevResult?.isPlaceholderData && options.placeholderData === prevResultOptions?.placeholderData) {
-        placeholderData = prevResult.data;
-        skipSelect = true;
-      } else {
-        placeholderData = typeof options.placeholderData === "function" ? options.placeholderData(
-          __privateGet(this, _lastQueryWithDefinedData)?.state.data,
-          __privateGet(this, _lastQueryWithDefinedData)
-        ) : options.placeholderData;
-      }
-      if (placeholderData !== void 0) {
-        status = "success";
-        data = replaceData(
-          prevResult?.data,
-          placeholderData,
-          options
-        );
-        isPlaceholderData = true;
-      }
-    }
-    if (options.select && data !== void 0 && !skipSelect) {
-      if (prevResult && data === prevResultState?.data && options.select === __privateGet(this, _selectFn)) {
-        data = __privateGet(this, _selectResult);
-      } else {
-        try {
-          __privateSet(this, _selectFn, options.select);
-          data = options.select(data);
-          data = replaceData(prevResult?.data, data, options);
-          __privateSet(this, _selectResult, data);
-          __privateSet(this, _selectError, null);
-        } catch (selectError) {
-          __privateSet(this, _selectError, selectError);
-        }
-      }
-    }
-    if (__privateGet(this, _selectError)) {
-      error = __privateGet(this, _selectError);
-      data = __privateGet(this, _selectResult);
-      errorUpdatedAt = Date.now();
-      status = "error";
-    }
-    const isFetching = newState.fetchStatus === "fetching";
-    const isPending = status === "pending";
-    const isError = status === "error";
-    const isLoading = isPending && isFetching;
-    const hasData = data !== void 0;
-    const result = {
-      status,
-      fetchStatus: newState.fetchStatus,
-      isPending,
-      isSuccess: status === "success",
-      isError,
-      isInitialLoading: isLoading,
-      isLoading,
-      data,
-      dataUpdatedAt: newState.dataUpdatedAt,
-      error,
-      errorUpdatedAt,
-      failureCount: newState.fetchFailureCount,
-      failureReason: newState.fetchFailureReason,
-      errorUpdateCount: newState.errorUpdateCount,
-      isFetched: newState.dataUpdateCount > 0 || newState.errorUpdateCount > 0,
-      isFetchedAfterMount: newState.dataUpdateCount > queryInitialState.dataUpdateCount || newState.errorUpdateCount > queryInitialState.errorUpdateCount,
-      isFetching,
-      isRefetching: isFetching && !isPending,
-      isLoadingError: isError && !hasData,
-      isPaused: newState.fetchStatus === "paused",
-      isPlaceholderData,
-      isRefetchError: isError && hasData,
-      isStale: isStale(query, options),
-      refetch: this.refetch,
-      promise: __privateGet(this, _currentThenable)
-    };
-    const nextResult = result;
-    if (this.options.experimental_prefetchInRender) {
-      const finalizeThenableIfPossible = (thenable) => {
-        if (nextResult.status === "error") {
-          thenable.reject(nextResult.error);
-        } else if (nextResult.data !== void 0) {
-          thenable.resolve(nextResult.data);
-        }
-      };
-      const recreateThenable = () => {
-        const pending = __privateSet(this, _currentThenable, nextResult.promise = pendingThenable());
-        finalizeThenableIfPossible(pending);
-      };
-      const prevThenable = __privateGet(this, _currentThenable);
-      switch (prevThenable.status) {
-        case "pending":
-          if (query.queryHash === prevQuery.queryHash) {
-            finalizeThenableIfPossible(prevThenable);
-          }
-          break;
-        case "fulfilled":
-          if (nextResult.status === "error" || nextResult.data !== prevThenable.value) {
-            recreateThenable();
-          }
-          break;
-        case "rejected":
-          if (nextResult.status !== "error" || nextResult.error !== prevThenable.reason) {
-            recreateThenable();
-          }
-          break;
-      }
-    }
-    return nextResult;
-  }
-  updateResult() {
-    const prevResult = __privateGet(this, _currentResult);
-    const nextResult = this.createResult(__privateGet(this, _currentQuery), this.options);
-    __privateSet(this, _currentResultState, __privateGet(this, _currentQuery).state);
-    __privateSet(this, _currentResultOptions, this.options);
-    if (__privateGet(this, _currentResultState).data !== void 0) {
-      __privateSet(this, _lastQueryWithDefinedData, __privateGet(this, _currentQuery));
-    }
-    if (shallowEqualObjects(nextResult, prevResult)) {
-      return;
-    }
-    __privateSet(this, _currentResult, nextResult);
-    const shouldNotifyListeners = () => {
-      if (!prevResult) {
-        return true;
-      }
-      const { notifyOnChangeProps } = this.options;
-      const notifyOnChangePropsValue = typeof notifyOnChangeProps === "function" ? notifyOnChangeProps() : notifyOnChangeProps;
-      if (notifyOnChangePropsValue === "all" || !notifyOnChangePropsValue && !__privateGet(this, _trackedProps).size) {
-        return true;
-      }
-      const includedProps = new Set(
-        notifyOnChangePropsValue ?? __privateGet(this, _trackedProps)
-      );
-      if (this.options.throwOnError) {
-        includedProps.add("error");
-      }
-      return Object.keys(__privateGet(this, _currentResult)).some((key) => {
-        const typedKey = key;
-        const changed = __privateGet(this, _currentResult)[typedKey] !== prevResult[typedKey];
-        return changed && includedProps.has(typedKey);
-      });
-    };
-    __privateMethod(this, _QueryObserver_instances, notify_fn).call(this, { listeners: shouldNotifyListeners() });
-  }
-  onQueryUpdate() {
-    this.updateResult();
-    if (this.hasListeners()) {
-      __privateMethod(this, _QueryObserver_instances, updateTimers_fn).call(this);
-    }
-  }
-}, _client2 = new WeakMap(), _currentQuery = new WeakMap(), _currentQueryInitialState = new WeakMap(), _currentResult = new WeakMap(), _currentResultState = new WeakMap(), _currentResultOptions = new WeakMap(), _currentThenable = new WeakMap(), _selectError = new WeakMap(), _selectFn = new WeakMap(), _selectResult = new WeakMap(), _lastQueryWithDefinedData = new WeakMap(), _staleTimeoutId = new WeakMap(), _refetchIntervalId = new WeakMap(), _currentRefetchInterval = new WeakMap(), _trackedProps = new WeakMap(), _QueryObserver_instances = new WeakSet(), executeFetch_fn = function(fetchOptions) {
-  __privateMethod(this, _QueryObserver_instances, updateQuery_fn).call(this);
-  let promise = __privateGet(this, _currentQuery).fetch(
-    this.options,
-    fetchOptions
-  );
-  if (!fetchOptions?.throwOnError) {
-    promise = promise.catch(noop$1);
-  }
-  return promise;
-}, updateStaleTimeout_fn = function() {
-  __privateMethod(this, _QueryObserver_instances, clearStaleTimeout_fn).call(this);
-  const staleTime = resolveStaleTime(
-    this.options.staleTime,
-    __privateGet(this, _currentQuery)
-  );
-  if (isServer || __privateGet(this, _currentResult).isStale || !isValidTimeout(staleTime)) {
-    return;
-  }
-  const time2 = timeUntilStale(__privateGet(this, _currentResult).dataUpdatedAt, staleTime);
-  const timeout = time2 + 1;
-  __privateSet(this, _staleTimeoutId, setTimeout(() => {
-    if (!__privateGet(this, _currentResult).isStale) {
-      this.updateResult();
-    }
-  }, timeout));
-}, computeRefetchInterval_fn = function() {
-  return (typeof this.options.refetchInterval === "function" ? this.options.refetchInterval(__privateGet(this, _currentQuery)) : this.options.refetchInterval) ?? false;
-}, updateRefetchInterval_fn = function(nextInterval) {
-  __privateMethod(this, _QueryObserver_instances, clearRefetchInterval_fn).call(this);
-  __privateSet(this, _currentRefetchInterval, nextInterval);
-  if (isServer || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) === false || !isValidTimeout(__privateGet(this, _currentRefetchInterval)) || __privateGet(this, _currentRefetchInterval) === 0) {
-    return;
-  }
-  __privateSet(this, _refetchIntervalId, setInterval(() => {
-    if (this.options.refetchIntervalInBackground || focusManager.isFocused()) {
-      __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this);
-    }
-  }, __privateGet(this, _currentRefetchInterval)));
-}, updateTimers_fn = function() {
-  __privateMethod(this, _QueryObserver_instances, updateStaleTimeout_fn).call(this);
-  __privateMethod(this, _QueryObserver_instances, updateRefetchInterval_fn).call(this, __privateMethod(this, _QueryObserver_instances, computeRefetchInterval_fn).call(this));
-}, clearStaleTimeout_fn = function() {
-  if (__privateGet(this, _staleTimeoutId)) {
-    clearTimeout(__privateGet(this, _staleTimeoutId));
-    __privateSet(this, _staleTimeoutId, void 0);
-  }
-}, clearRefetchInterval_fn = function() {
-  if (__privateGet(this, _refetchIntervalId)) {
-    clearInterval(__privateGet(this, _refetchIntervalId));
-    __privateSet(this, _refetchIntervalId, void 0);
-  }
-}, updateQuery_fn = function() {
-  const query = __privateGet(this, _client2).getQueryCache().build(__privateGet(this, _client2), this.options);
-  if (query === __privateGet(this, _currentQuery)) {
-    return;
-  }
-  const prevQuery = __privateGet(this, _currentQuery);
-  __privateSet(this, _currentQuery, query);
-  __privateSet(this, _currentQueryInitialState, query.state);
-  if (this.hasListeners()) {
-    prevQuery?.removeObserver(this);
-    query.addObserver(this);
-  }
-}, notify_fn = function(notifyOptions) {
-  notifyManager.batch(() => {
-    if (notifyOptions.listeners) {
-      this.listeners.forEach((listener) => {
-        listener(__privateGet(this, _currentResult));
-      });
-    }
-    __privateGet(this, _client2).getQueryCache().notify({
-      query: __privateGet(this, _currentQuery),
-      type: "observerResultsUpdated"
-    });
-  });
-}, _i);
-function shouldLoadOnMount(query, options) {
-  return resolveEnabled(options.enabled, query) !== false && query.state.data === void 0 && !(query.state.status === "error" && options.retryOnMount === false);
-}
-function shouldFetchOnMount(query, options) {
-  return shouldLoadOnMount(query, options) || query.state.data !== void 0 && shouldFetchOn(query, options, options.refetchOnMount);
-}
-function shouldFetchOn(query, options, field) {
-  if (resolveEnabled(options.enabled, query) !== false && resolveStaleTime(options.staleTime, query) !== "static") {
-    const value = typeof field === "function" ? field(query) : field;
-    return value === "always" || value !== false && isStale(query, options);
-  }
-  return false;
-}
-function shouldFetchOptionally(query, prevQuery, options, prevOptions) {
-  return (query !== prevQuery || resolveEnabled(prevOptions.enabled, query) === false) && (!options.suspense || query.state.status !== "error") && isStale(query, options);
-}
-function isStale(query, options) {
-  return resolveEnabled(options.enabled, query) !== false && query.isStaleByTime(resolveStaleTime(options.staleTime, query));
-}
-function shouldAssignObserverCurrentProperties(observer, optimisticResult) {
-  if (!shallowEqualObjects(observer.getCurrentResult(), optimisticResult)) {
-    return true;
-  }
-  return false;
-}
-var MutationObserver$1 = (_j = class extends Subscribable {
-  constructor(client2, options) {
-    super();
-    __privateAdd(this, _MutationObserver_instances);
-    __privateAdd(this, _client3);
-    __privateAdd(this, _currentResult2);
-    __privateAdd(this, _currentMutation);
-    __privateAdd(this, _mutateOptions);
-    __privateSet(this, _client3, client2);
-    this.setOptions(options);
-    this.bindMethods();
-    __privateMethod(this, _MutationObserver_instances, updateResult_fn).call(this);
-  }
-  bindMethods() {
-    this.mutate = this.mutate.bind(this);
-    this.reset = this.reset.bind(this);
-  }
-  setOptions(options) {
-    const prevOptions = this.options;
-    this.options = __privateGet(this, _client3).defaultMutationOptions(options);
-    if (!shallowEqualObjects(this.options, prevOptions)) {
-      __privateGet(this, _client3).getMutationCache().notify({
-        type: "observerOptionsUpdated",
-        mutation: __privateGet(this, _currentMutation),
-        observer: this
-      });
-    }
-    if (prevOptions?.mutationKey && this.options.mutationKey && hashKey(prevOptions.mutationKey) !== hashKey(this.options.mutationKey)) {
-      this.reset();
-    } else if (__privateGet(this, _currentMutation)?.state.status === "pending") {
-      __privateGet(this, _currentMutation).setOptions(this.options);
-    }
-  }
-  onUnsubscribe() {
-    if (!this.hasListeners()) {
-      __privateGet(this, _currentMutation)?.removeObserver(this);
-    }
-  }
-  onMutationUpdate(action) {
-    __privateMethod(this, _MutationObserver_instances, updateResult_fn).call(this);
-    __privateMethod(this, _MutationObserver_instances, notify_fn2).call(this, action);
-  }
-  getCurrentResult() {
-    return __privateGet(this, _currentResult2);
-  }
-  reset() {
-    __privateGet(this, _currentMutation)?.removeObserver(this);
-    __privateSet(this, _currentMutation, void 0);
-    __privateMethod(this, _MutationObserver_instances, updateResult_fn).call(this);
-    __privateMethod(this, _MutationObserver_instances, notify_fn2).call(this);
-  }
-  mutate(variables, options) {
-    __privateSet(this, _mutateOptions, options);
-    __privateGet(this, _currentMutation)?.removeObserver(this);
-    __privateSet(this, _currentMutation, __privateGet(this, _client3).getMutationCache().build(__privateGet(this, _client3), this.options));
-    __privateGet(this, _currentMutation).addObserver(this);
-    return __privateGet(this, _currentMutation).execute(variables);
-  }
-}, _client3 = new WeakMap(), _currentResult2 = new WeakMap(), _currentMutation = new WeakMap(), _mutateOptions = new WeakMap(), _MutationObserver_instances = new WeakSet(), updateResult_fn = function() {
-  const state = __privateGet(this, _currentMutation)?.state ?? getDefaultState();
-  __privateSet(this, _currentResult2, {
-    ...state,
-    isPending: state.status === "pending",
-    isSuccess: state.status === "success",
-    isError: state.status === "error",
-    isIdle: state.status === "idle",
-    mutate: this.mutate,
-    reset: this.reset
-  });
-}, notify_fn2 = function(action) {
-  notifyManager.batch(() => {
-    if (__privateGet(this, _mutateOptions) && this.hasListeners()) {
-      const variables = __privateGet(this, _currentResult2).variables;
-      const context = __privateGet(this, _currentResult2).context;
-      if (action?.type === "success") {
-        __privateGet(this, _mutateOptions).onSuccess?.(action.data, variables, context);
-        __privateGet(this, _mutateOptions).onSettled?.(action.data, null, variables, context);
-      } else if (action?.type === "error") {
-        __privateGet(this, _mutateOptions).onError?.(action.error, variables, context);
-        __privateGet(this, _mutateOptions).onSettled?.(
-          void 0,
-          action.error,
-          variables,
-          context
-        );
-      }
-    }
-    this.listeners.forEach((listener) => {
-      listener(__privateGet(this, _currentResult2));
-    });
-  });
-}, _j);
-var QueryClientContext = reactExports.createContext(
-  void 0
-);
-var useQueryClient = (queryClient2) => {
-  const client2 = reactExports.useContext(QueryClientContext);
-  if (!client2) {
-    throw new Error("No QueryClient set, use QueryClientProvider to set one");
-  }
-  return client2;
-};
-var QueryClientProvider = ({
-  client: client2,
-  children
-}) => {
-  reactExports.useEffect(() => {
-    client2.mount();
-    return () => {
-      client2.unmount();
-    };
-  }, [client2]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientContext.Provider, { value: client2, children });
-};
-var IsRestoringContext = reactExports.createContext(false);
-var useIsRestoring = () => reactExports.useContext(IsRestoringContext);
-IsRestoringContext.Provider;
-function createValue() {
-  let isReset = false;
-  return {
-    clearReset: () => {
-      isReset = false;
-    },
-    reset: () => {
-      isReset = true;
-    },
-    isReset: () => {
-      return isReset;
-    }
-  };
-}
-var QueryErrorResetBoundaryContext = reactExports.createContext(createValue());
-var useQueryErrorResetBoundary = () => reactExports.useContext(QueryErrorResetBoundaryContext);
-var ensurePreventErrorBoundaryRetry = (options, errorResetBoundary) => {
-  if (options.suspense || options.throwOnError || options.experimental_prefetchInRender) {
-    if (!errorResetBoundary.isReset()) {
-      options.retryOnMount = false;
-    }
-  }
-};
-var useClearResetErrorBoundary = (errorResetBoundary) => {
-  reactExports.useEffect(() => {
-    errorResetBoundary.clearReset();
-  }, [errorResetBoundary]);
-};
-var getHasError = ({
-  result,
-  errorResetBoundary,
-  throwOnError,
-  query,
-  suspense
-}) => {
-  return result.isError && !errorResetBoundary.isReset() && !result.isFetching && query && (suspense && result.data === void 0 || shouldThrowError(throwOnError, [result.error, query]));
-};
-var ensureSuspenseTimers = (defaultedOptions) => {
-  if (defaultedOptions.suspense) {
-    const clamp2 = (value) => value === "static" ? value : Math.max(value ?? 1e3, 1e3);
-    const originalStaleTime = defaultedOptions.staleTime;
-    defaultedOptions.staleTime = typeof originalStaleTime === "function" ? (...args) => clamp2(originalStaleTime(...args)) : clamp2(originalStaleTime);
-    if (typeof defaultedOptions.gcTime === "number") {
-      defaultedOptions.gcTime = Math.max(defaultedOptions.gcTime, 1e3);
-    }
-  }
-};
-var willFetch = (result, isRestoring) => result.isLoading && result.isFetching && !isRestoring;
-var shouldSuspend = (defaultedOptions, result) => defaultedOptions?.suspense && result.isPending;
-var fetchOptimistic = (defaultedOptions, observer, errorResetBoundary) => observer.fetchOptimistic(defaultedOptions).catch(() => {
-  errorResetBoundary.clearReset();
-});
-function useBaseQuery(options, Observer, queryClient2) {
-  const isRestoring = useIsRestoring();
-  const errorResetBoundary = useQueryErrorResetBoundary();
-  const client2 = useQueryClient();
-  const defaultedOptions = client2.defaultQueryOptions(options);
-  client2.getDefaultOptions().queries?._experimental_beforeQuery?.(
-    defaultedOptions
-  );
-  defaultedOptions._optimisticResults = isRestoring ? "isRestoring" : "optimistic";
-  ensureSuspenseTimers(defaultedOptions);
-  ensurePreventErrorBoundaryRetry(defaultedOptions, errorResetBoundary);
-  useClearResetErrorBoundary(errorResetBoundary);
-  const isNewCacheEntry = !client2.getQueryCache().get(defaultedOptions.queryHash);
-  const [observer] = reactExports.useState(
-    () => new Observer(
-      client2,
-      defaultedOptions
-    )
-  );
-  const result = observer.getOptimisticResult(defaultedOptions);
-  const shouldSubscribe = !isRestoring && options.subscribed !== false;
-  reactExports.useSyncExternalStore(
-    reactExports.useCallback(
-      (onStoreChange) => {
-        const unsubscribe = shouldSubscribe ? observer.subscribe(notifyManager.batchCalls(onStoreChange)) : noop$1;
-        observer.updateResult();
-        return unsubscribe;
-      },
-      [observer, shouldSubscribe]
-    ),
-    () => observer.getCurrentResult(),
-    () => observer.getCurrentResult()
-  );
-  reactExports.useEffect(() => {
-    observer.setOptions(defaultedOptions);
-  }, [defaultedOptions, observer]);
-  if (shouldSuspend(defaultedOptions, result)) {
-    throw fetchOptimistic(defaultedOptions, observer, errorResetBoundary);
-  }
-  if (getHasError({
-    result,
-    errorResetBoundary,
-    throwOnError: defaultedOptions.throwOnError,
-    query: client2.getQueryCache().get(defaultedOptions.queryHash),
-    suspense: defaultedOptions.suspense
-  })) {
-    throw result.error;
-  }
-  client2.getDefaultOptions().queries?._experimental_afterQuery?.(
-    defaultedOptions,
-    result
-  );
-  if (defaultedOptions.experimental_prefetchInRender && !isServer && willFetch(result, isRestoring)) {
-    const promise = isNewCacheEntry ? (
-      // Fetch immediately on render in order to ensure `.promise` is resolved even if the component is unmounted
-      fetchOptimistic(defaultedOptions, observer, errorResetBoundary)
-    ) : (
-      // subscribe to the "cache promise" so that we can finalize the currentThenable once data comes in
-      client2.getQueryCache().get(defaultedOptions.queryHash)?.promise
-    );
-    promise?.catch(noop$1).finally(() => {
-      observer.updateResult();
-    });
-  }
-  return !defaultedOptions.notifyOnChangeProps ? observer.trackResult(result) : result;
-}
-function useQuery(options, queryClient2) {
-  return useBaseQuery(options, QueryObserver);
-}
-function useMutation(options, queryClient2) {
-  const client2 = useQueryClient();
-  const [observer] = reactExports.useState(
-    () => new MutationObserver$1(
-      client2,
-      options
-    )
-  );
-  reactExports.useEffect(() => {
-    observer.setOptions(options);
-  }, [observer, options]);
-  const result = reactExports.useSyncExternalStore(
-    reactExports.useCallback(
-      (onStoreChange) => observer.subscribe(notifyManager.batchCalls(onStoreChange)),
-      [observer]
-    ),
-    () => observer.getCurrentResult(),
-    () => observer.getCurrentResult()
-  );
-  const mutate = reactExports.useCallback(
-    (variables, mutateOptions) => {
-      observer.mutate(variables, mutateOptions).catch(noop$1);
-    },
-    [observer]
-  );
-  if (result.error && shouldThrowError(observer.options.throwOnError, [result.error])) {
-    throw result.error;
-  }
-  return { ...result, mutate, mutateAsync: result.mutate };
-}
-function parse$1(input, loose) {
-  if (input instanceof RegExp) return { keys: false, pattern: input };
-  var c2, o2, tmp, ext, keys = [], pattern = "", arr = input.split("/");
-  arr[0] || arr.shift();
-  while (tmp = arr.shift()) {
-    c2 = tmp[0];
-    if (c2 === "*") {
-      keys.push(c2);
-      pattern += tmp[1] === "?" ? "(?:/(.*))?" : "/(.*)";
-    } else if (c2 === ":") {
-      o2 = tmp.indexOf("?", 1);
-      ext = tmp.indexOf(".", 1);
-      keys.push(tmp.substring(1, !!~o2 ? o2 : !!~ext ? ext : tmp.length));
-      pattern += !!~o2 && !~ext ? "(?:/([^/]+?))?" : "/([^/]+?)";
-      if (!!~ext) pattern += (!!~o2 ? "?" : "") + "\\" + tmp.substring(ext);
-    } else {
-      pattern += "/" + tmp;
-    }
-  }
-  return {
-    keys,
-    pattern: new RegExp("^" + pattern + (loose ? "(?=$|/)" : "/?$"), "i")
-  };
-}
-var shim = { exports: {} };
-var useSyncExternalStoreShim_production = {};
-/**
- * @license React
- * use-sync-external-store-shim.production.js
- *
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-var hasRequiredUseSyncExternalStoreShim_production;
-function requireUseSyncExternalStoreShim_production() {
-  if (hasRequiredUseSyncExternalStoreShim_production) return useSyncExternalStoreShim_production;
-  hasRequiredUseSyncExternalStoreShim_production = 1;
-  var React2 = requireReact();
-  function is2(x, y) {
-    return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
-  }
-  var objectIs = "function" === typeof Object.is ? Object.is : is2, useState = React2.useState, useEffect = React2.useEffect, useLayoutEffect = React2.useLayoutEffect, useDebugValue = React2.useDebugValue;
-  function useSyncExternalStore$2(subscribe2, getSnapshot) {
-    var value = getSnapshot(), _useState = useState({ inst: { value, getSnapshot } }), inst = _useState[0].inst, forceUpdate = _useState[1];
-    useLayoutEffect(
-      function() {
-        inst.value = value;
-        inst.getSnapshot = getSnapshot;
-        checkIfSnapshotChanged(inst) && forceUpdate({ inst });
-      },
-      [subscribe2, value, getSnapshot]
-    );
-    useEffect(
-      function() {
-        checkIfSnapshotChanged(inst) && forceUpdate({ inst });
-        return subscribe2(function() {
-          checkIfSnapshotChanged(inst) && forceUpdate({ inst });
-        });
-      },
-      [subscribe2]
-    );
-    useDebugValue(value);
-    return value;
-  }
-  function checkIfSnapshotChanged(inst) {
-    var latestGetSnapshot = inst.getSnapshot;
-    inst = inst.value;
-    try {
-      var nextValue = latestGetSnapshot();
-      return !objectIs(inst, nextValue);
-    } catch (error) {
-      return true;
-    }
-  }
-  function useSyncExternalStore$1(subscribe2, getSnapshot) {
-    return getSnapshot();
-  }
-  var shim2 = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
-  useSyncExternalStoreShim_production.useSyncExternalStore = void 0 !== React2.useSyncExternalStore ? React2.useSyncExternalStore : shim2;
-  return useSyncExternalStoreShim_production;
-}
-var hasRequiredShim;
-function requireShim() {
-  if (hasRequiredShim) return shim.exports;
-  hasRequiredShim = 1;
-  {
-    shim.exports = requireUseSyncExternalStoreShim_production();
-  }
-  return shim.exports;
-}
-var shimExports = requireShim();
-const useBuiltinInsertionEffect = React$1["useInsertionEffect"];
-const canUseDOM = !!(typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.document.createElement !== "undefined");
-const useIsomorphicLayoutEffect$2 = canUseDOM ? reactExports.useLayoutEffect : reactExports.useEffect;
-const useInsertionEffect$1 = useBuiltinInsertionEffect || useIsomorphicLayoutEffect$2;
-const useEvent = (fn) => {
-  const ref = reactExports.useRef([fn, (...args) => ref[0](...args)]).current;
-  useInsertionEffect$1(() => {
-    ref[0] = fn;
-  });
-  return ref[1];
-};
-const eventPopstate = "popstate";
-const eventPushState = "pushState";
-const eventReplaceState = "replaceState";
-const eventHashchange = "hashchange";
-const events = [
-  eventPopstate,
-  eventPushState,
-  eventReplaceState,
-  eventHashchange
-];
-const subscribeToLocationUpdates = (callback) => {
-  for (const event of events) {
-    addEventListener(event, callback);
-  }
-  return () => {
-    for (const event of events) {
-      removeEventListener(event, callback);
-    }
-  };
-};
-const useLocationProperty = (fn, ssrFn) => shimExports.useSyncExternalStore(subscribeToLocationUpdates, fn, ssrFn);
-const currentSearch = () => location.search;
-const useSearch = ({ ssrSearch = "" } = {}) => useLocationProperty(currentSearch, () => ssrSearch);
-const currentPathname = () => location.pathname;
-const usePathname = ({ ssrPath } = {}) => useLocationProperty(
-  currentPathname,
-  ssrPath ? () => ssrPath : currentPathname
-);
-const navigate = (to, { replace = false, state = null } = {}) => history[replace ? eventReplaceState : eventPushState](state, "", to);
-const useBrowserLocation = (opts = {}) => [usePathname(opts), navigate];
-const patchKey = Symbol.for("wouter_v3");
-if (typeof history !== "undefined" && typeof window[patchKey] === "undefined") {
-  for (const type of [eventPushState, eventReplaceState]) {
-    const original = history[type];
-    history[type] = function() {
-      const result = original.apply(this, arguments);
-      const event = new Event(type);
-      event.arguments = arguments;
-      dispatchEvent(event);
-      return result;
-    };
-  }
-  Object.defineProperty(window, patchKey, { value: true });
-}
-const _relativePath = (base, path) => !path.toLowerCase().indexOf(base.toLowerCase()) ? path.slice(base.length) || "/" : "~" + path;
-const baseDefaults = (base = "") => base === "/" ? "" : base;
-const absolutePath = (to, base) => to[0] === "~" ? to.slice(1) : baseDefaults(base) + to;
-const relativePath = (base = "", path) => _relativePath(unescape(baseDefaults(base)), unescape(path));
-const unescape = (str) => {
-  try {
-    return decodeURI(str);
-  } catch (_e2) {
-    return str;
-  }
-};
-const defaultRouter = {
-  hook: useBrowserLocation,
-  searchHook: useSearch,
-  parser: parse$1,
-  base: "",
-  // this option is used to override the current location during SSR
-  ssrPath: void 0,
-  ssrSearch: void 0,
-  // optional context to track render state during SSR
-  ssrContext: void 0,
-  // customizes how `href` props are transformed for <Link />
-  hrefs: (x) => x
-};
-const RouterCtx = reactExports.createContext(defaultRouter);
-const useRouter = () => reactExports.useContext(RouterCtx);
-const Params0 = {}, ParamsCtx = reactExports.createContext(Params0);
-const useParams = () => reactExports.useContext(ParamsCtx);
-const useLocationFromRouter = (router) => {
-  const [location2, navigate2] = router.hook(router);
-  return [
-    relativePath(router.base, location2),
-    useEvent((to, navOpts) => navigate2(absolutePath(to, router.base), navOpts))
-  ];
-};
-const useLocation = () => useLocationFromRouter(useRouter());
-const matchRoute = (parser, route, path, loose) => {
-  const { pattern, keys } = route instanceof RegExp ? { keys: false, pattern: route } : parser(route || "*", loose);
-  const result = pattern.exec(path) || [];
-  const [$base, ...matches] = result;
-  return $base !== void 0 ? [
-    true,
-    (() => {
-      const groups = keys !== false ? Object.fromEntries(keys.map((key, i2) => [key, matches[i2]])) : result.groups;
-      let obj = { ...matches };
-      groups && Object.assign(obj, groups);
-      return obj;
-    })(),
-    // the third value if only present when parser is in "loose" mode,
-    // so that we can extract the base path for nested routes
-    ...loose ? [$base] : []
-  ] : [false, null];
-};
-const Router$1 = ({ children, ...props }) => {
-  const parent_ = useRouter();
-  const parent = props.hook ? defaultRouter : parent_;
-  let value = parent;
-  const [path, search] = props.ssrPath?.split("?") ?? [];
-  if (search) props.ssrSearch = search, props.ssrPath = path;
-  props.hrefs = props.hrefs ?? props.hook?.hrefs;
-  let ref = reactExports.useRef({}), prev = ref.current, next = prev;
-  for (let k in parent) {
-    const option = k === "base" ? (
-      /* base is special case, it is appended to the parent's base */
-      parent[k] + (props[k] || "")
-    ) : props[k] || parent[k];
-    if (prev === next && option !== next[k]) {
-      ref.current = next = { ...next };
-    }
-    next[k] = option;
-    if (option !== parent[k] || option !== value[k]) value = next;
-  }
-  return reactExports.createElement(RouterCtx.Provider, { value, children });
-};
-const h_route = ({ children, component }, params) => {
-  if (component) return reactExports.createElement(component, { params });
-  return typeof children === "function" ? children(params) : children;
-};
-const useCachedParams = (value) => {
-  let prev = reactExports.useRef(Params0);
-  const curr = prev.current;
-  return prev.current = // Update cache if number of params changed or any value changed
-  Object.keys(value).length !== Object.keys(curr).length || Object.entries(value).some(([k, v]) => v !== curr[k]) ? value : curr;
-};
-const Route = ({ path, nest, match: match2, ...renderProps }) => {
-  const router = useRouter();
-  const [location2] = useLocationFromRouter(router);
-  const [matches, routeParams, base] = (
-    // `match` is a special prop to give up control to the parent,
-    // it is used by the `Switch` to avoid double matching
-    match2 ?? matchRoute(router.parser, path, location2, nest)
-  );
-  const params = useCachedParams({ ...useParams(), ...routeParams });
-  if (!matches) return null;
-  const children = base ? reactExports.createElement(Router$1, { base }, h_route(renderProps, params)) : h_route(renderProps, params);
-  return reactExports.createElement(ParamsCtx.Provider, { value: params, children });
-};
-const Link = reactExports.forwardRef((props, ref) => {
-  const router = useRouter();
-  const [currentPath, navigate2] = useLocationFromRouter(router);
-  const {
-    to = "",
-    href: targetPath = to,
-    onClick: _onClick,
-    asChild,
-    children,
-    className: cls,
-    /* eslint-disable no-unused-vars */
-    replace,
-    state,
-    /* eslint-enable no-unused-vars */
-    ...restProps
-  } = props;
-  const onClick = useEvent((event) => {
-    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.button !== 0)
-      return;
-    _onClick?.(event);
-    if (!event.defaultPrevented) {
-      event.preventDefault();
-      navigate2(targetPath, props);
-    }
-  });
-  const href = router.hrefs(
-    targetPath[0] === "~" ? targetPath.slice(1) : router.base + targetPath,
-    router
-    // pass router as a second argument for convinience
-  );
-  return asChild && reactExports.isValidElement(children) ? reactExports.cloneElement(children, { onClick, href }) : reactExports.createElement("a", {
-    ...restProps,
-    onClick,
-    href,
-    // `className` can be a function to apply the class if this link is active
-    className: cls?.call ? cls(currentPath === targetPath) : cls,
-    children,
-    ref
-  });
-});
-const flattenChildren = (children) => Array.isArray(children) ? children.flatMap(
-  (c2) => flattenChildren(c2 && c2.type === reactExports.Fragment ? c2.props.children : c2)
-) : [children];
-const Switch$2 = ({ children, location: location2 }) => {
-  const router = useRouter();
-  const [originalLocation] = useLocationFromRouter(router);
-  for (const element of flattenChildren(children)) {
-    let match2 = 0;
-    if (reactExports.isValidElement(element) && // we don't require an element to be of type Route,
-    // but we do require it to contain a truthy `path` prop.
-    // this allows to use different components that wrap Route
-    // inside of a switch, for example <AnimatedRoute />.
-    (match2 = matchRoute(
-      router.parser,
-      element.props.path,
-      location2 || originalLocation,
-      element.props.nest
-    ))[0])
-      return reactExports.cloneElement(element, { match: match2 });
-  }
-  return null;
-};
-const Redirect = (props) => {
-  const { to, href = to } = props;
-  const router = useRouter();
-  const [, navigate2] = useLocationFromRouter(router);
-  const redirect = useEvent(() => navigate2(to || href, props));
-  const { ssrContext } = router;
-  useIsomorphicLayoutEffect$2(() => {
-    redirect();
-  }, []);
-  if (ssrContext) {
-    ssrContext.redirectTo = to;
-  }
-  return null;
-};
-async function throwIfResNotOk(res) {
-  if (!res.ok) {
-    if (res.status === 401 && res.url.includes("/api/auth/status")) {
-      return;
-    }
-    let errorMessage;
-    try {
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const errorData = await res.json();
-        errorMessage = errorData.message || JSON.stringify(errorData);
-      } else {
-        errorMessage = await res.text();
-      }
-    } catch (e) {
-      errorMessage = res.statusText || `Error ${res.status}`;
-    }
-    throw new Error(`${res.status}: ${errorMessage}`);
-  }
-}
-async function apiRequest(method, url, data) {
-  let sanitizedData = data;
-  if (data && typeof data === "object") {
-    sanitizedData = {};
-    const isDateLike = (value) => {
-      return value && typeof value === "object" && !(value instanceof Date) && (value.hasOwnProperty("_isAMomentObject") || value.hasOwnProperty("_isValid"));
-    };
-    Object.entries(data).forEach(([key, value]) => {
-      if (isDateLike(value)) {
-        sanitizedData[key] = String(value);
-      } else if (Array.isArray(value)) {
-        sanitizedData[key] = value;
-      } else if (typeof value === "number") {
-        sanitizedData[key] = value;
-      } else if (value && typeof value === "object") {
-        sanitizedData[key] = value;
-      } else {
-        sanitizedData[key] = value;
-      }
-    });
-  }
-  try {
-    const urlWithCacheBusting = method.toUpperCase() === "GET" ? `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}` : url;
-    const res = await fetch(urlWithCacheBusting, {
-      method,
-      headers: sanitizedData ? { "Content-Type": "application/json" } : {},
-      body: sanitizedData ? JSON.stringify(sanitizedData) : void 0,
-      credentials: "include"
-    });
-    await throwIfResNotOk(res);
-    return res;
-  } catch (error) {
-    if (!(url === "/api/auth/status" && error instanceof Error && error.message.startsWith("401:"))) {
-      const isAdmin = window.location.pathname.startsWith("/admin");
-      if (isAdmin) {
-        console.error(`API request error for ${method} ${url}:`, error);
-      } else if (url !== "/api/auth/status") {
-        console.warn(`API request warning for ${method} ${url}:`, error);
-      } else ;
-    }
-    throw error;
-  }
-}
-const getQueryFn = ({ on401: unauthorizedBehavior }) => async ({ queryKey }) => {
-  try {
-    let url;
-    if (typeof queryKey[0] === "string" && queryKey[0].startsWith("/")) {
-      url = queryKey[0];
-    } else if (queryKey.length > 1 && typeof queryKey[1] === "string" && queryKey[1].startsWith("/")) {
-      url = queryKey[1];
-    } else {
-      throw new Error(`Invalid queryKey: ${JSON.stringify(queryKey)}`);
-    }
-    const urlWithCacheBusting = `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}`;
-    const res = await fetch(urlWithCacheBusting, {
-      credentials: "include"
-    });
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-    await throwIfResNotOk(res);
-    return await res.json();
-  } catch (error) {
-    let url;
-    if (typeof queryKey[0] === "string" && queryKey[0].startsWith("/")) {
-      url = queryKey[0];
-    } else if (queryKey.length > 1 && typeof queryKey[1] === "string" && queryKey[1].startsWith("/")) {
-      url = queryKey[1];
-    } else {
-      url = String(queryKey[0]);
-    }
-    const isAdmin = window.location.pathname.startsWith("/admin");
-    const isAuthError = error instanceof Error && error.message.startsWith("401:");
-    if (!isAuthError || isAdmin && url !== "/api/auth/status") {
-      if (isAdmin) {
-        console.error(`Query error for ${url}:`, error);
-      }
-    }
-    throw error;
-  }
-};
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: 3e4,
-      // 30 seconds instead of Infinity
-      retry: false
-    },
-    mutations: {
-      retry: false
-    }
-  }
-});
-const AuthContext = reactExports.createContext(null);
-function AuthProvider({ children }) {
-  const { toast: toast2 } = useToast();
-  const [token, setToken] = reactExports.useState(null);
-  const [location2] = useLocation();
-  const isPublicRoute = ["/", "/properties", "/properties/:slug", "/auth"].some(
-    (route) => location2.startsWith(route.replace(":slug", ""))
-  );
-  const shouldCheckAuth = location2.startsWith("/admin") || !isPublicRoute;
-  const {
-    data: user,
-    error,
-    isLoading
-  } = useQuery({
-    queryKey: ["/api/auth/status"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    staleTime: Infinity,
-    enabled: shouldCheckAuth
-    // Always check for admin routes
-  });
-  reactExports.useEffect(() => {
-    if (user) {
-      const timestamp2 = Date.now().toString(36);
-      const randomPart = Math.random().toString(36).substring(2);
-      const userPart = user.id.toString(36);
-      const newToken = `ws_${userPart}_${timestamp2}_${randomPart}`;
-      setToken(newToken);
-    } else {
-      setToken(null);
-    }
-  }, [user]);
-  const loginMutation = useMutation({
-    mutationFn: async (credentials) => {
-      const res = await apiRequest("POST", "/api/auth/login", credentials);
-      return await res.json();
-    },
-    onSuccess: (user2) => {
-      queryClient.setQueryData(["/api/auth/status"], user2);
-      setTimeout(() => {
-        queryClient.invalidateQueries();
-      }, 100);
-      toast2({
-        title: "Login successful",
-        description: `Welcome back, ${user2?.username || user2?.email || "User"}!`
-      });
-    },
-    onError: (error2) => {
-      toast2({
-        title: "Login failed",
-        description: error2.message,
-        variant: "destructive"
-      });
-    }
-  });
-  const registerMutation = useMutation({
-    mutationFn: async (credentials) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
-      return await res.json();
-    },
-    onSuccess: (user2) => {
-      queryClient.setQueryData(["/api/auth/status"], user2);
-      toast2({
-        title: "Registration successful",
-        description: `Welcome, ${user2.username}!`
-      });
-    },
-    onError: (error2) => {
-      toast2({
-        title: "Registration failed",
-        description: error2.message,
-        variant: "destructive"
-      });
-    }
-  });
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/auth/logout");
-    },
-    onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/status"], null);
-      setToken(null);
-      toast2({
-        title: "Logged out",
-        description: "You have been successfully logged out."
-      });
-    },
-    onError: (error2) => {
-      toast2({
-        title: "Logout failed",
-        description: error2.message,
-        variant: "destructive"
-      });
-    }
-  });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    AuthContext.Provider,
-    {
-      value: {
-        user: user ?? null,
-        token,
-        isLoading,
-        error,
-        loginMutation,
-        logoutMutation,
-        registerMutation
-      },
-      children
-    }
-  );
-}
-function useAuth() {
-  const context = reactExports.useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
-function useWebSocket({
-  path = "",
-  token,
-  onMessage,
-  onOpen,
-  onClose,
-  onError,
-  reconnectOnClose = true,
-  disabled = true
-  // Default to enabled
-} = {}) {
-  const [socket, setSocket] = reactExports.useState(null);
-  const [status, setStatus] = reactExports.useState("closed");
-  const [error, setError] = reactExports.useState(null);
-  const connectionAttemptsRef = reactExports.useRef(0);
-  const reconnectTimeoutRef = reactExports.useRef(null);
-  const isConnectingRef = reactExports.useRef(false);
-  const wsSupported = typeof WebSocket !== "undefined";
-  const onMessageRef = reactExports.useRef(onMessage);
-  const onOpenRef = reactExports.useRef(onOpen);
-  const onCloseRef = reactExports.useRef(onClose);
-  const onErrorRef = reactExports.useRef(onError);
-  reactExports.useEffect(() => {
-    onMessageRef.current = onMessage;
-    onOpenRef.current = onOpen;
-    onCloseRef.current = onClose;
-    onErrorRef.current = onError;
-  });
-  reactExports.useEffect(() => {
-    if (disabled) {
-      setStatus("closed");
-      return;
-    }
-    if (!wsSupported) {
-      console.warn("WebSockets are not supported in this environment");
-      setStatus("unsupported");
-      return;
-    }
-    if (!token) {
-      setStatus("closed");
-      return;
-    }
-    if (isConnectingRef.current || socket && socket.readyState !== WebSocket.CLOSED) {
-      return;
-    }
-    if (connectionAttemptsRef.current > 3) {
-      console.warn("WebSocket connection attempts exceeded, stopping reconnection attempts");
-      setStatus("error");
-      return;
-    }
-    isConnectingRef.current = true;
-    const hostname = window.location.hostname || "localhost";
-    let wsUrl;
-    try {
-      console.log(`[WS] Building URL with path: "${path}"`);
-      if (hostname === "localhost" || hostname === "127.0.0.1") {
-        const backendPort = "7822";
-        console.log("Using WebSocket port:", backendPort);
-        wsUrl = `ws://${hostname}:${backendPort}${path}${path.includes("?") ? "&" : "?"}token=${token}`;
-      } else {
-        const portPart = window.location.port && window.location.port !== "" ? `:${window.location.port}` : "";
-        wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${hostname}${portPart}${path}${path.includes("?") ? "&" : "?"}token=${token}`;
-      }
-    } catch (error2) {
-      console.error("Error building WebSocket URL:", error2);
-      wsUrl = `ws://localhost:7822${path}${path.includes("?") ? "&" : "?"}token=${token}`;
-    }
-    const debugUrl = wsUrl.replace(/token=([^&]*)/, "token=REDACTED");
-    console.log(`[WS] Attempting connection ${connectionAttemptsRef.current + 1}/4 to: ${debugUrl}`);
-    let ws;
-    try {
-      ws = new WebSocket(wsUrl);
-      setSocket(ws);
-      setStatus("connecting");
-      const connectionTimeout = setTimeout(() => {
-        if (ws && ws.readyState !== WebSocket.OPEN) {
-          console.warn("WebSocket connection timed out");
-          isConnectingRef.current = false;
-          ws.close();
-          setStatus("error");
-          if (reconnectOnClose && connectionAttemptsRef.current < 3) {
-            const backoffTime = Math.min(3e3 * Math.pow(2, connectionAttemptsRef.current), 3e4);
-            connectionAttemptsRef.current += 1;
-            if (reconnectTimeoutRef.current) {
-              window.clearTimeout(reconnectTimeoutRef.current);
-            }
-            reconnectTimeoutRef.current = window.setTimeout(() => {
-              setSocket(null);
-              reconnectTimeoutRef.current = null;
-            }, backoffTime);
-          }
-        }
-      }, 5e3);
-      ws.onopen = () => {
-        clearTimeout(connectionTimeout);
-        isConnectingRef.current = false;
-        setStatus("open");
-        connectionAttemptsRef.current = 0;
-        console.log("[WS] Connection established successfully");
-        if (onOpenRef.current) onOpenRef.current();
-      };
-      ws.onmessage = (event) => {
-        if (onMessageRef.current) {
-          try {
-            const data = JSON.parse(event.data);
-            onMessageRef.current(data);
-          } catch (e) {
-            onMessageRef.current(event.data);
-          }
-        }
-      };
-      ws.onclose = () => {
-        clearTimeout(connectionTimeout);
-        isConnectingRef.current = false;
-        setStatus("closed");
-        if (onCloseRef.current) onCloseRef.current();
-        if (reconnectOnClose && connectionAttemptsRef.current < 3) {
-          const backoffTime = Math.min(3e3 * Math.pow(2, connectionAttemptsRef.current), 3e4);
-          connectionAttemptsRef.current += 1;
-          if (reconnectTimeoutRef.current) {
-            window.clearTimeout(reconnectTimeoutRef.current);
-          }
-          reconnectTimeoutRef.current = window.setTimeout(() => {
-            setSocket(null);
-            reconnectTimeoutRef.current = null;
-          }, backoffTime);
-        }
-      };
-      ws.onerror = (event) => {
-        if (connectionAttemptsRef.current === 0) {
-          console.warn("[WS] WebSocket error occurred - this may be normal if no WebSocket server is available");
-        }
-        isConnectingRef.current = false;
-        setError(event);
-        if (onErrorRef.current) onErrorRef.current(event);
-      };
-    } catch (error2) {
-      if (connectionAttemptsRef.current === 0) {
-        console.warn("WebSocket initialization error - this may be normal if no WebSocket server is available");
-      }
-      isConnectingRef.current = false;
-      setStatus("error");
-      if (reconnectOnClose && connectionAttemptsRef.current < 3) {
-        const backoffTime = Math.min(3e3 * Math.pow(2, connectionAttemptsRef.current), 3e4);
-        connectionAttemptsRef.current += 1;
-        if (reconnectTimeoutRef.current) {
-          window.clearTimeout(reconnectTimeoutRef.current);
-        }
-        reconnectTimeoutRef.current = window.setTimeout(() => {
-          setSocket(null);
-          reconnectTimeoutRef.current = null;
-        }, backoffTime);
-      }
-    }
-    return () => {
-      isConnectingRef.current = false;
-      if (ws) {
-        ws.close();
-      }
-      if (reconnectTimeoutRef.current) {
-        window.clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-    };
-  }, [path, token, reconnectOnClose, disabled, wsSupported]);
-  const sendMessage = (data) => {
-    if (socket && status === "open") {
-      try {
-        socket.send(typeof data === "string" ? data : JSON.stringify(data));
-        return true;
-      } catch (error2) {
-        console.error("Error sending message:", error2);
-        return false;
-      }
-    }
-    return false;
-  };
-  return {
-    socket,
-    status,
-    error,
-    sendMessage,
-    isConnecting: status === "connecting",
-    isConnected: status === "open",
-    isClosed: status === "closed",
-    isError: status === "error",
-    isUnsupported: status === "unsupported"
-  };
-}
-const WebSocketContext = reactExports.createContext({
-  isConnected: false,
-  sendMessage: () => {
-    console.warn("WebSocket connection not initialized");
-    return false;
-  },
-  isAuthenticated: false,
-  status: "closed"
-});
-function WebSocketProvider({ children }) {
-  const { user, token } = useAuth();
-  const isAuthenticated = !!user;
-  const { status, sendMessage, isConnected } = useWebSocket({
-    token: token || void 0,
-    path: "/ws",
-    // Specify a dedicated WebSocket path
-    disabled: !isAuthenticated,
-    // Only disable if not authenticated
-    onMessage: (data) => {
-      console.log("WebSocket message received:", data);
-    },
-    onOpen: () => {
-      console.log("WebSocket connection opened successfully");
-    },
-    onError: (error) => {
-      console.warn("WebSocket error:", error);
-    },
-    onClose: () => {
-      console.log("WebSocket connection closed");
-    },
-    reconnectOnClose: true
-  });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    WebSocketContext.Provider,
-    {
-      value: {
-        isConnected,
-        sendMessage,
-        isAuthenticated,
-        status
-      },
-      children
-    }
-  );
-}
 var reactDomExports = requireReactDom();
 const ReactDOM = /* @__PURE__ */ getDefaultExportFromCjs(reactDomExports);
 function composeEventHandlers(originalEventHandler, ourEventHandler, { checkForDefaultPrevented = true } = {}) {
@@ -11172,7 +7876,7 @@ function getElementRef(element) {
   }
   return element.props.ref || element.ref;
 }
-var useInsertionEffect = React$1[" useInsertionEffect ".trim().toString()] || useLayoutEffect2;
+var useInsertionEffect$1 = React$1[" useInsertionEffect ".trim().toString()] || useLayoutEffect2;
 function useControllableState({
   prop,
   defaultProp,
@@ -11222,7 +7926,7 @@ function useUncontrolledState({
   const [value, setValue] = reactExports.useState(defaultProp);
   const prevValueRef = reactExports.useRef(value);
   const onChangeRef = reactExports.useRef(onChange);
-  useInsertionEffect(() => {
+  useInsertionEffect$1(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
   reactExports.useEffect(() => {
@@ -15206,6 +11910,3068 @@ function Toaster() {
     }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(ToastViewport, {})
   ] });
+}
+var Subscribable = class {
+  constructor() {
+    this.listeners = /* @__PURE__ */ new Set();
+    this.subscribe = this.subscribe.bind(this);
+  }
+  subscribe(listener) {
+    this.listeners.add(listener);
+    this.onSubscribe();
+    return () => {
+      this.listeners.delete(listener);
+      this.onUnsubscribe();
+    };
+  }
+  hasListeners() {
+    return this.listeners.size > 0;
+  }
+  onSubscribe() {
+  }
+  onUnsubscribe() {
+  }
+};
+var isServer = typeof window === "undefined" || "Deno" in globalThis;
+function noop$1() {
+}
+function functionalUpdate(updater, input) {
+  return typeof updater === "function" ? updater(input) : updater;
+}
+function isValidTimeout(value) {
+  return typeof value === "number" && value >= 0 && value !== Infinity;
+}
+function timeUntilStale(updatedAt, staleTime) {
+  return Math.max(updatedAt + (staleTime || 0) - Date.now(), 0);
+}
+function resolveStaleTime(staleTime, query) {
+  return typeof staleTime === "function" ? staleTime(query) : staleTime;
+}
+function resolveEnabled(enabled, query) {
+  return typeof enabled === "function" ? enabled(query) : enabled;
+}
+function matchQuery(filters, query) {
+  const {
+    type = "all",
+    exact,
+    fetchStatus,
+    predicate,
+    queryKey,
+    stale
+  } = filters;
+  if (queryKey) {
+    if (exact) {
+      if (query.queryHash !== hashQueryKeyByOptions(queryKey, query.options)) {
+        return false;
+      }
+    } else if (!partialMatchKey(query.queryKey, queryKey)) {
+      return false;
+    }
+  }
+  if (type !== "all") {
+    const isActive = query.isActive();
+    if (type === "active" && !isActive) {
+      return false;
+    }
+    if (type === "inactive" && isActive) {
+      return false;
+    }
+  }
+  if (typeof stale === "boolean" && query.isStale() !== stale) {
+    return false;
+  }
+  if (fetchStatus && fetchStatus !== query.state.fetchStatus) {
+    return false;
+  }
+  if (predicate && !predicate(query)) {
+    return false;
+  }
+  return true;
+}
+function matchMutation(filters, mutation) {
+  const { exact, status, predicate, mutationKey } = filters;
+  if (mutationKey) {
+    if (!mutation.options.mutationKey) {
+      return false;
+    }
+    if (exact) {
+      if (hashKey(mutation.options.mutationKey) !== hashKey(mutationKey)) {
+        return false;
+      }
+    } else if (!partialMatchKey(mutation.options.mutationKey, mutationKey)) {
+      return false;
+    }
+  }
+  if (status && mutation.state.status !== status) {
+    return false;
+  }
+  if (predicate && !predicate(mutation)) {
+    return false;
+  }
+  return true;
+}
+function hashQueryKeyByOptions(queryKey, options) {
+  const hashFn = options?.queryKeyHashFn || hashKey;
+  return hashFn(queryKey);
+}
+function hashKey(queryKey) {
+  return JSON.stringify(
+    queryKey,
+    (_, val) => isPlainObject$1(val) ? Object.keys(val).sort().reduce((result, key) => {
+      result[key] = val[key];
+      return result;
+    }, {}) : val
+  );
+}
+function partialMatchKey(a, b) {
+  if (a === b) {
+    return true;
+  }
+  if (typeof a !== typeof b) {
+    return false;
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    return Object.keys(b).every((key) => partialMatchKey(a[key], b[key]));
+  }
+  return false;
+}
+function replaceEqualDeep(a, b) {
+  if (a === b) {
+    return a;
+  }
+  const array = isPlainArray(a) && isPlainArray(b);
+  if (array || isPlainObject$1(a) && isPlainObject$1(b)) {
+    const aItems = array ? a : Object.keys(a);
+    const aSize = aItems.length;
+    const bItems = array ? b : Object.keys(b);
+    const bSize = bItems.length;
+    const copy = array ? [] : {};
+    const aItemsSet = new Set(aItems);
+    let equalItems = 0;
+    for (let i2 = 0; i2 < bSize; i2++) {
+      const key = array ? i2 : bItems[i2];
+      if ((!array && aItemsSet.has(key) || array) && a[key] === void 0 && b[key] === void 0) {
+        copy[key] = void 0;
+        equalItems++;
+      } else {
+        copy[key] = replaceEqualDeep(a[key], b[key]);
+        if (copy[key] === a[key] && a[key] !== void 0) {
+          equalItems++;
+        }
+      }
+    }
+    return aSize === bSize && equalItems === aSize ? a : copy;
+  }
+  return b;
+}
+function shallowEqualObjects(a, b) {
+  if (!b || Object.keys(a).length !== Object.keys(b).length) {
+    return false;
+  }
+  for (const key in a) {
+    if (a[key] !== b[key]) {
+      return false;
+    }
+  }
+  return true;
+}
+function isPlainArray(value) {
+  return Array.isArray(value) && value.length === Object.keys(value).length;
+}
+function isPlainObject$1(o2) {
+  if (!hasObjectPrototype(o2)) {
+    return false;
+  }
+  const ctor = o2.constructor;
+  if (ctor === void 0) {
+    return true;
+  }
+  const prot = ctor.prototype;
+  if (!hasObjectPrototype(prot)) {
+    return false;
+  }
+  if (!prot.hasOwnProperty("isPrototypeOf")) {
+    return false;
+  }
+  if (Object.getPrototypeOf(o2) !== Object.prototype) {
+    return false;
+  }
+  return true;
+}
+function hasObjectPrototype(o2) {
+  return Object.prototype.toString.call(o2) === "[object Object]";
+}
+function sleep(timeout) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, timeout);
+  });
+}
+function replaceData(prevData, data, options) {
+  if (typeof options.structuralSharing === "function") {
+    return options.structuralSharing(prevData, data);
+  } else if (options.structuralSharing !== false) {
+    return replaceEqualDeep(prevData, data);
+  }
+  return data;
+}
+function addToEnd(items, item, max2 = 0) {
+  const newItems = [...items, item];
+  return max2 && newItems.length > max2 ? newItems.slice(1) : newItems;
+}
+function addToStart(items, item, max2 = 0) {
+  const newItems = [item, ...items];
+  return max2 && newItems.length > max2 ? newItems.slice(0, -1) : newItems;
+}
+var skipToken = Symbol();
+function ensureQueryFn(options, fetchOptions) {
+  if (!options.queryFn && fetchOptions?.initialPromise) {
+    return () => fetchOptions.initialPromise;
+  }
+  if (!options.queryFn || options.queryFn === skipToken) {
+    return () => Promise.reject(new Error(`Missing queryFn: '${options.queryHash}'`));
+  }
+  return options.queryFn;
+}
+function shouldThrowError(throwOnError, params) {
+  if (typeof throwOnError === "function") {
+    return throwOnError(...params);
+  }
+  return !!throwOnError;
+}
+var FocusManager = (_a = class extends Subscribable {
+  constructor() {
+    super();
+    __privateAdd(this, _focused);
+    __privateAdd(this, _cleanup);
+    __privateAdd(this, _setup);
+    __privateSet(this, _setup, (onFocus) => {
+      if (!isServer && window.addEventListener) {
+        const listener = () => onFocus();
+        window.addEventListener("visibilitychange", listener, false);
+        return () => {
+          window.removeEventListener("visibilitychange", listener);
+        };
+      }
+      return;
+    });
+  }
+  onSubscribe() {
+    if (!__privateGet(this, _cleanup)) {
+      this.setEventListener(__privateGet(this, _setup));
+    }
+  }
+  onUnsubscribe() {
+    var _a2;
+    if (!this.hasListeners()) {
+      (_a2 = __privateGet(this, _cleanup)) == null ? void 0 : _a2.call(this);
+      __privateSet(this, _cleanup, void 0);
+    }
+  }
+  setEventListener(setup) {
+    var _a2;
+    __privateSet(this, _setup, setup);
+    (_a2 = __privateGet(this, _cleanup)) == null ? void 0 : _a2.call(this);
+    __privateSet(this, _cleanup, setup((focused) => {
+      if (typeof focused === "boolean") {
+        this.setFocused(focused);
+      } else {
+        this.onFocus();
+      }
+    }));
+  }
+  setFocused(focused) {
+    const changed = __privateGet(this, _focused) !== focused;
+    if (changed) {
+      __privateSet(this, _focused, focused);
+      this.onFocus();
+    }
+  }
+  onFocus() {
+    const isFocused = this.isFocused();
+    this.listeners.forEach((listener) => {
+      listener(isFocused);
+    });
+  }
+  isFocused() {
+    if (typeof __privateGet(this, _focused) === "boolean") {
+      return __privateGet(this, _focused);
+    }
+    return globalThis.document?.visibilityState !== "hidden";
+  }
+}, _focused = new WeakMap(), _cleanup = new WeakMap(), _setup = new WeakMap(), _a);
+var focusManager = new FocusManager();
+var OnlineManager = (_b = class extends Subscribable {
+  constructor() {
+    super();
+    __privateAdd(this, _online, true);
+    __privateAdd(this, _cleanup2);
+    __privateAdd(this, _setup2);
+    __privateSet(this, _setup2, (onOnline) => {
+      if (!isServer && window.addEventListener) {
+        const onlineListener = () => onOnline(true);
+        const offlineListener = () => onOnline(false);
+        window.addEventListener("online", onlineListener, false);
+        window.addEventListener("offline", offlineListener, false);
+        return () => {
+          window.removeEventListener("online", onlineListener);
+          window.removeEventListener("offline", offlineListener);
+        };
+      }
+      return;
+    });
+  }
+  onSubscribe() {
+    if (!__privateGet(this, _cleanup2)) {
+      this.setEventListener(__privateGet(this, _setup2));
+    }
+  }
+  onUnsubscribe() {
+    var _a2;
+    if (!this.hasListeners()) {
+      (_a2 = __privateGet(this, _cleanup2)) == null ? void 0 : _a2.call(this);
+      __privateSet(this, _cleanup2, void 0);
+    }
+  }
+  setEventListener(setup) {
+    var _a2;
+    __privateSet(this, _setup2, setup);
+    (_a2 = __privateGet(this, _cleanup2)) == null ? void 0 : _a2.call(this);
+    __privateSet(this, _cleanup2, setup(this.setOnline.bind(this)));
+  }
+  setOnline(online) {
+    const changed = __privateGet(this, _online) !== online;
+    if (changed) {
+      __privateSet(this, _online, online);
+      this.listeners.forEach((listener) => {
+        listener(online);
+      });
+    }
+  }
+  isOnline() {
+    return __privateGet(this, _online);
+  }
+}, _online = new WeakMap(), _cleanup2 = new WeakMap(), _setup2 = new WeakMap(), _b);
+var onlineManager = new OnlineManager();
+function pendingThenable() {
+  let resolve;
+  let reject;
+  const thenable = new Promise((_resolve, _reject) => {
+    resolve = _resolve;
+    reject = _reject;
+  });
+  thenable.status = "pending";
+  thenable.catch(() => {
+  });
+  function finalize(data) {
+    Object.assign(thenable, data);
+    delete thenable.resolve;
+    delete thenable.reject;
+  }
+  thenable.resolve = (value) => {
+    finalize({
+      status: "fulfilled",
+      value
+    });
+    resolve(value);
+  };
+  thenable.reject = (reason) => {
+    finalize({
+      status: "rejected",
+      reason
+    });
+    reject(reason);
+  };
+  return thenable;
+}
+function defaultRetryDelay(failureCount) {
+  return Math.min(1e3 * 2 ** failureCount, 3e4);
+}
+function canFetch(networkMode) {
+  return (networkMode ?? "online") === "online" ? onlineManager.isOnline() : true;
+}
+var CancelledError = class extends Error {
+  constructor(options) {
+    super("CancelledError");
+    this.revert = options?.revert;
+    this.silent = options?.silent;
+  }
+};
+function isCancelledError(value) {
+  return value instanceof CancelledError;
+}
+function createRetryer(config) {
+  let isRetryCancelled = false;
+  let failureCount = 0;
+  let isResolved = false;
+  let continueFn;
+  const thenable = pendingThenable();
+  const cancel = (cancelOptions) => {
+    if (!isResolved) {
+      reject(new CancelledError(cancelOptions));
+      config.abort?.();
+    }
+  };
+  const cancelRetry = () => {
+    isRetryCancelled = true;
+  };
+  const continueRetry = () => {
+    isRetryCancelled = false;
+  };
+  const canContinue = () => focusManager.isFocused() && (config.networkMode === "always" || onlineManager.isOnline()) && config.canRun();
+  const canStart = () => canFetch(config.networkMode) && config.canRun();
+  const resolve = (value) => {
+    if (!isResolved) {
+      isResolved = true;
+      config.onSuccess?.(value);
+      continueFn?.();
+      thenable.resolve(value);
+    }
+  };
+  const reject = (value) => {
+    if (!isResolved) {
+      isResolved = true;
+      config.onError?.(value);
+      continueFn?.();
+      thenable.reject(value);
+    }
+  };
+  const pause = () => {
+    return new Promise((continueResolve) => {
+      continueFn = (value) => {
+        if (isResolved || canContinue()) {
+          continueResolve(value);
+        }
+      };
+      config.onPause?.();
+    }).then(() => {
+      continueFn = void 0;
+      if (!isResolved) {
+        config.onContinue?.();
+      }
+    });
+  };
+  const run = () => {
+    if (isResolved) {
+      return;
+    }
+    let promiseOrValue;
+    const initialPromise = failureCount === 0 ? config.initialPromise : void 0;
+    try {
+      promiseOrValue = initialPromise ?? config.fn();
+    } catch (error) {
+      promiseOrValue = Promise.reject(error);
+    }
+    Promise.resolve(promiseOrValue).then(resolve).catch((error) => {
+      if (isResolved) {
+        return;
+      }
+      const retry = config.retry ?? (isServer ? 0 : 3);
+      const retryDelay = config.retryDelay ?? defaultRetryDelay;
+      const delay = typeof retryDelay === "function" ? retryDelay(failureCount, error) : retryDelay;
+      const shouldRetry = retry === true || typeof retry === "number" && failureCount < retry || typeof retry === "function" && retry(failureCount, error);
+      if (isRetryCancelled || !shouldRetry) {
+        reject(error);
+        return;
+      }
+      failureCount++;
+      config.onFail?.(failureCount, error);
+      sleep(delay).then(() => {
+        return canContinue() ? void 0 : pause();
+      }).then(() => {
+        if (isRetryCancelled) {
+          reject(error);
+        } else {
+          run();
+        }
+      });
+    });
+  };
+  return {
+    promise: thenable,
+    cancel,
+    continue: () => {
+      continueFn?.();
+      return thenable;
+    },
+    cancelRetry,
+    continueRetry,
+    canStart,
+    start: () => {
+      if (canStart()) {
+        run();
+      } else {
+        pause().then(run);
+      }
+      return thenable;
+    }
+  };
+}
+var defaultScheduler = (cb) => setTimeout(cb, 0);
+function createNotifyManager() {
+  let queue = [];
+  let transactions = 0;
+  let notifyFn = (callback) => {
+    callback();
+  };
+  let batchNotifyFn = (callback) => {
+    callback();
+  };
+  let scheduleFn = defaultScheduler;
+  const schedule = (callback) => {
+    if (transactions) {
+      queue.push(callback);
+    } else {
+      scheduleFn(() => {
+        notifyFn(callback);
+      });
+    }
+  };
+  const flush = () => {
+    const originalQueue = queue;
+    queue = [];
+    if (originalQueue.length) {
+      scheduleFn(() => {
+        batchNotifyFn(() => {
+          originalQueue.forEach((callback) => {
+            notifyFn(callback);
+          });
+        });
+      });
+    }
+  };
+  return {
+    batch: (callback) => {
+      let result;
+      transactions++;
+      try {
+        result = callback();
+      } finally {
+        transactions--;
+        if (!transactions) {
+          flush();
+        }
+      }
+      return result;
+    },
+    /**
+     * All calls to the wrapped function will be batched.
+     */
+    batchCalls: (callback) => {
+      return (...args) => {
+        schedule(() => {
+          callback(...args);
+        });
+      };
+    },
+    schedule,
+    /**
+     * Use this method to set a custom notify function.
+     * This can be used to for example wrap notifications with `React.act` while running tests.
+     */
+    setNotifyFunction: (fn) => {
+      notifyFn = fn;
+    },
+    /**
+     * Use this method to set a custom function to batch notifications together into a single tick.
+     * By default React Query will use the batch function provided by ReactDOM or React Native.
+     */
+    setBatchNotifyFunction: (fn) => {
+      batchNotifyFn = fn;
+    },
+    setScheduler: (fn) => {
+      scheduleFn = fn;
+    }
+  };
+}
+var notifyManager = createNotifyManager();
+var Removable = (_c = class {
+  constructor() {
+    __privateAdd(this, _gcTimeout);
+  }
+  destroy() {
+    this.clearGcTimeout();
+  }
+  scheduleGc() {
+    this.clearGcTimeout();
+    if (isValidTimeout(this.gcTime)) {
+      __privateSet(this, _gcTimeout, setTimeout(() => {
+        this.optionalRemove();
+      }, this.gcTime));
+    }
+  }
+  updateGcTime(newGcTime) {
+    this.gcTime = Math.max(
+      this.gcTime || 0,
+      newGcTime ?? (isServer ? Infinity : 5 * 60 * 1e3)
+    );
+  }
+  clearGcTimeout() {
+    if (__privateGet(this, _gcTimeout)) {
+      clearTimeout(__privateGet(this, _gcTimeout));
+      __privateSet(this, _gcTimeout, void 0);
+    }
+  }
+}, _gcTimeout = new WeakMap(), _c);
+var Query = (_d = class extends Removable {
+  constructor(config) {
+    super();
+    __privateAdd(this, _Query_instances);
+    __privateAdd(this, _initialState);
+    __privateAdd(this, _revertState);
+    __privateAdd(this, _cache);
+    __privateAdd(this, _client);
+    __privateAdd(this, _retryer);
+    __privateAdd(this, _defaultOptions);
+    __privateAdd(this, _abortSignalConsumed);
+    __privateSet(this, _abortSignalConsumed, false);
+    __privateSet(this, _defaultOptions, config.defaultOptions);
+    this.setOptions(config.options);
+    this.observers = [];
+    __privateSet(this, _client, config.client);
+    __privateSet(this, _cache, __privateGet(this, _client).getQueryCache());
+    this.queryKey = config.queryKey;
+    this.queryHash = config.queryHash;
+    __privateSet(this, _initialState, getDefaultState$1(this.options));
+    this.state = config.state ?? __privateGet(this, _initialState);
+    this.scheduleGc();
+  }
+  get meta() {
+    return this.options.meta;
+  }
+  get promise() {
+    return __privateGet(this, _retryer)?.promise;
+  }
+  setOptions(options) {
+    this.options = { ...__privateGet(this, _defaultOptions), ...options };
+    this.updateGcTime(this.options.gcTime);
+  }
+  optionalRemove() {
+    if (!this.observers.length && this.state.fetchStatus === "idle") {
+      __privateGet(this, _cache).remove(this);
+    }
+  }
+  setData(newData, options) {
+    const data = replaceData(this.state.data, newData, this.options);
+    __privateMethod(this, _Query_instances, dispatch_fn).call(this, {
+      data,
+      type: "success",
+      dataUpdatedAt: options?.updatedAt,
+      manual: options?.manual
+    });
+    return data;
+  }
+  setState(state, setStateOptions) {
+    __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "setState", state, setStateOptions });
+  }
+  cancel(options) {
+    const promise = __privateGet(this, _retryer)?.promise;
+    __privateGet(this, _retryer)?.cancel(options);
+    return promise ? promise.then(noop$1).catch(noop$1) : Promise.resolve();
+  }
+  destroy() {
+    super.destroy();
+    this.cancel({ silent: true });
+  }
+  reset() {
+    this.destroy();
+    this.setState(__privateGet(this, _initialState));
+  }
+  isActive() {
+    return this.observers.some(
+      (observer) => resolveEnabled(observer.options.enabled, this) !== false
+    );
+  }
+  isDisabled() {
+    if (this.getObserversCount() > 0) {
+      return !this.isActive();
+    }
+    return this.options.queryFn === skipToken || this.state.dataUpdateCount + this.state.errorUpdateCount === 0;
+  }
+  isStatic() {
+    if (this.getObserversCount() > 0) {
+      return this.observers.some(
+        (observer) => resolveStaleTime(observer.options.staleTime, this) === "static"
+      );
+    }
+    return false;
+  }
+  isStale() {
+    if (this.getObserversCount() > 0) {
+      return this.observers.some(
+        (observer) => observer.getCurrentResult().isStale
+      );
+    }
+    return this.state.data === void 0 || this.state.isInvalidated;
+  }
+  isStaleByTime(staleTime = 0) {
+    if (this.state.data === void 0) {
+      return true;
+    }
+    if (staleTime === "static") {
+      return false;
+    }
+    if (this.state.isInvalidated) {
+      return true;
+    }
+    return !timeUntilStale(this.state.dataUpdatedAt, staleTime);
+  }
+  onFocus() {
+    const observer = this.observers.find((x) => x.shouldFetchOnWindowFocus());
+    observer?.refetch({ cancelRefetch: false });
+    __privateGet(this, _retryer)?.continue();
+  }
+  onOnline() {
+    const observer = this.observers.find((x) => x.shouldFetchOnReconnect());
+    observer?.refetch({ cancelRefetch: false });
+    __privateGet(this, _retryer)?.continue();
+  }
+  addObserver(observer) {
+    if (!this.observers.includes(observer)) {
+      this.observers.push(observer);
+      this.clearGcTimeout();
+      __privateGet(this, _cache).notify({ type: "observerAdded", query: this, observer });
+    }
+  }
+  removeObserver(observer) {
+    if (this.observers.includes(observer)) {
+      this.observers = this.observers.filter((x) => x !== observer);
+      if (!this.observers.length) {
+        if (__privateGet(this, _retryer)) {
+          if (__privateGet(this, _abortSignalConsumed)) {
+            __privateGet(this, _retryer).cancel({ revert: true });
+          } else {
+            __privateGet(this, _retryer).cancelRetry();
+          }
+        }
+        this.scheduleGc();
+      }
+      __privateGet(this, _cache).notify({ type: "observerRemoved", query: this, observer });
+    }
+  }
+  getObserversCount() {
+    return this.observers.length;
+  }
+  invalidate() {
+    if (!this.state.isInvalidated) {
+      __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "invalidate" });
+    }
+  }
+  fetch(options, fetchOptions) {
+    if (this.state.fetchStatus !== "idle") {
+      if (this.state.data !== void 0 && fetchOptions?.cancelRefetch) {
+        this.cancel({ silent: true });
+      } else if (__privateGet(this, _retryer)) {
+        __privateGet(this, _retryer).continueRetry();
+        return __privateGet(this, _retryer).promise;
+      }
+    }
+    if (options) {
+      this.setOptions(options);
+    }
+    if (!this.options.queryFn) {
+      const observer = this.observers.find((x) => x.options.queryFn);
+      if (observer) {
+        this.setOptions(observer.options);
+      }
+    }
+    const abortController = new AbortController();
+    const addSignalProperty = (object) => {
+      Object.defineProperty(object, "signal", {
+        enumerable: true,
+        get: () => {
+          __privateSet(this, _abortSignalConsumed, true);
+          return abortController.signal;
+        }
+      });
+    };
+    const fetchFn = () => {
+      const queryFn = ensureQueryFn(this.options, fetchOptions);
+      const createQueryFnContext = () => {
+        const queryFnContext2 = {
+          client: __privateGet(this, _client),
+          queryKey: this.queryKey,
+          meta: this.meta
+        };
+        addSignalProperty(queryFnContext2);
+        return queryFnContext2;
+      };
+      const queryFnContext = createQueryFnContext();
+      __privateSet(this, _abortSignalConsumed, false);
+      if (this.options.persister) {
+        return this.options.persister(
+          queryFn,
+          queryFnContext,
+          this
+        );
+      }
+      return queryFn(queryFnContext);
+    };
+    const createFetchContext = () => {
+      const context2 = {
+        fetchOptions,
+        options: this.options,
+        queryKey: this.queryKey,
+        client: __privateGet(this, _client),
+        state: this.state,
+        fetchFn
+      };
+      addSignalProperty(context2);
+      return context2;
+    };
+    const context = createFetchContext();
+    this.options.behavior?.onFetch(context, this);
+    __privateSet(this, _revertState, this.state);
+    if (this.state.fetchStatus === "idle" || this.state.fetchMeta !== context.fetchOptions?.meta) {
+      __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "fetch", meta: context.fetchOptions?.meta });
+    }
+    const onError = (error) => {
+      if (!(isCancelledError(error) && error.silent)) {
+        __privateMethod(this, _Query_instances, dispatch_fn).call(this, {
+          type: "error",
+          error
+        });
+      }
+      if (!isCancelledError(error)) {
+        __privateGet(this, _cache).config.onError?.(
+          error,
+          this
+        );
+        __privateGet(this, _cache).config.onSettled?.(
+          this.state.data,
+          error,
+          this
+        );
+      }
+      this.scheduleGc();
+    };
+    __privateSet(this, _retryer, createRetryer({
+      initialPromise: fetchOptions?.initialPromise,
+      fn: context.fetchFn,
+      abort: abortController.abort.bind(abortController),
+      onSuccess: (data) => {
+        if (data === void 0) {
+          onError(new Error(`${this.queryHash} data is undefined`));
+          return;
+        }
+        try {
+          this.setData(data);
+        } catch (error) {
+          onError(error);
+          return;
+        }
+        __privateGet(this, _cache).config.onSuccess?.(data, this);
+        __privateGet(this, _cache).config.onSettled?.(
+          data,
+          this.state.error,
+          this
+        );
+        this.scheduleGc();
+      },
+      onError,
+      onFail: (failureCount, error) => {
+        __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "failed", failureCount, error });
+      },
+      onPause: () => {
+        __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "pause" });
+      },
+      onContinue: () => {
+        __privateMethod(this, _Query_instances, dispatch_fn).call(this, { type: "continue" });
+      },
+      retry: context.options.retry,
+      retryDelay: context.options.retryDelay,
+      networkMode: context.options.networkMode,
+      canRun: () => true
+    }));
+    return __privateGet(this, _retryer).start();
+  }
+}, _initialState = new WeakMap(), _revertState = new WeakMap(), _cache = new WeakMap(), _client = new WeakMap(), _retryer = new WeakMap(), _defaultOptions = new WeakMap(), _abortSignalConsumed = new WeakMap(), _Query_instances = new WeakSet(), dispatch_fn = function(action) {
+  const reducer2 = (state) => {
+    switch (action.type) {
+      case "failed":
+        return {
+          ...state,
+          fetchFailureCount: action.failureCount,
+          fetchFailureReason: action.error
+        };
+      case "pause":
+        return {
+          ...state,
+          fetchStatus: "paused"
+        };
+      case "continue":
+        return {
+          ...state,
+          fetchStatus: "fetching"
+        };
+      case "fetch":
+        return {
+          ...state,
+          ...fetchState(state.data, this.options),
+          fetchMeta: action.meta ?? null
+        };
+      case "success":
+        return {
+          ...state,
+          data: action.data,
+          dataUpdateCount: state.dataUpdateCount + 1,
+          dataUpdatedAt: action.dataUpdatedAt ?? Date.now(),
+          error: null,
+          isInvalidated: false,
+          status: "success",
+          ...!action.manual && {
+            fetchStatus: "idle",
+            fetchFailureCount: 0,
+            fetchFailureReason: null
+          }
+        };
+      case "error":
+        const error = action.error;
+        if (isCancelledError(error) && error.revert && __privateGet(this, _revertState)) {
+          return { ...__privateGet(this, _revertState), fetchStatus: "idle" };
+        }
+        return {
+          ...state,
+          error,
+          errorUpdateCount: state.errorUpdateCount + 1,
+          errorUpdatedAt: Date.now(),
+          fetchFailureCount: state.fetchFailureCount + 1,
+          fetchFailureReason: error,
+          fetchStatus: "idle",
+          status: "error"
+        };
+      case "invalidate":
+        return {
+          ...state,
+          isInvalidated: true
+        };
+      case "setState":
+        return {
+          ...state,
+          ...action.state
+        };
+    }
+  };
+  this.state = reducer2(this.state);
+  notifyManager.batch(() => {
+    this.observers.forEach((observer) => {
+      observer.onQueryUpdate();
+    });
+    __privateGet(this, _cache).notify({ query: this, type: "updated", action });
+  });
+}, _d);
+function fetchState(data, options) {
+  return {
+    fetchFailureCount: 0,
+    fetchFailureReason: null,
+    fetchStatus: canFetch(options.networkMode) ? "fetching" : "paused",
+    ...data === void 0 && {
+      error: null,
+      status: "pending"
+    }
+  };
+}
+function getDefaultState$1(options) {
+  const data = typeof options.initialData === "function" ? options.initialData() : options.initialData;
+  const hasData = data !== void 0;
+  const initialDataUpdatedAt = hasData ? typeof options.initialDataUpdatedAt === "function" ? options.initialDataUpdatedAt() : options.initialDataUpdatedAt : 0;
+  return {
+    data,
+    dataUpdateCount: 0,
+    dataUpdatedAt: hasData ? initialDataUpdatedAt ?? Date.now() : 0,
+    error: null,
+    errorUpdateCount: 0,
+    errorUpdatedAt: 0,
+    fetchFailureCount: 0,
+    fetchFailureReason: null,
+    fetchMeta: null,
+    isInvalidated: false,
+    status: hasData ? "success" : "pending",
+    fetchStatus: "idle"
+  };
+}
+var QueryCache = (_e = class extends Subscribable {
+  constructor(config = {}) {
+    super();
+    __privateAdd(this, _queries);
+    this.config = config;
+    __privateSet(this, _queries, /* @__PURE__ */ new Map());
+  }
+  build(client2, options, state) {
+    const queryKey = options.queryKey;
+    const queryHash = options.queryHash ?? hashQueryKeyByOptions(queryKey, options);
+    let query = this.get(queryHash);
+    if (!query) {
+      query = new Query({
+        client: client2,
+        queryKey,
+        queryHash,
+        options: client2.defaultQueryOptions(options),
+        state,
+        defaultOptions: client2.getQueryDefaults(queryKey)
+      });
+      this.add(query);
+    }
+    return query;
+  }
+  add(query) {
+    if (!__privateGet(this, _queries).has(query.queryHash)) {
+      __privateGet(this, _queries).set(query.queryHash, query);
+      this.notify({
+        type: "added",
+        query
+      });
+    }
+  }
+  remove(query) {
+    const queryInMap = __privateGet(this, _queries).get(query.queryHash);
+    if (queryInMap) {
+      query.destroy();
+      if (queryInMap === query) {
+        __privateGet(this, _queries).delete(query.queryHash);
+      }
+      this.notify({ type: "removed", query });
+    }
+  }
+  clear() {
+    notifyManager.batch(() => {
+      this.getAll().forEach((query) => {
+        this.remove(query);
+      });
+    });
+  }
+  get(queryHash) {
+    return __privateGet(this, _queries).get(queryHash);
+  }
+  getAll() {
+    return [...__privateGet(this, _queries).values()];
+  }
+  find(filters) {
+    const defaultedFilters = { exact: true, ...filters };
+    return this.getAll().find(
+      (query) => matchQuery(defaultedFilters, query)
+    );
+  }
+  findAll(filters = {}) {
+    const queries = this.getAll();
+    return Object.keys(filters).length > 0 ? queries.filter((query) => matchQuery(filters, query)) : queries;
+  }
+  notify(event) {
+    notifyManager.batch(() => {
+      this.listeners.forEach((listener) => {
+        listener(event);
+      });
+    });
+  }
+  onFocus() {
+    notifyManager.batch(() => {
+      this.getAll().forEach((query) => {
+        query.onFocus();
+      });
+    });
+  }
+  onOnline() {
+    notifyManager.batch(() => {
+      this.getAll().forEach((query) => {
+        query.onOnline();
+      });
+    });
+  }
+}, _queries = new WeakMap(), _e);
+var Mutation = (_f = class extends Removable {
+  constructor(config) {
+    super();
+    __privateAdd(this, _Mutation_instances);
+    __privateAdd(this, _observers);
+    __privateAdd(this, _mutationCache);
+    __privateAdd(this, _retryer2);
+    this.mutationId = config.mutationId;
+    __privateSet(this, _mutationCache, config.mutationCache);
+    __privateSet(this, _observers, []);
+    this.state = config.state || getDefaultState();
+    this.setOptions(config.options);
+    this.scheduleGc();
+  }
+  setOptions(options) {
+    this.options = options;
+    this.updateGcTime(this.options.gcTime);
+  }
+  get meta() {
+    return this.options.meta;
+  }
+  addObserver(observer) {
+    if (!__privateGet(this, _observers).includes(observer)) {
+      __privateGet(this, _observers).push(observer);
+      this.clearGcTimeout();
+      __privateGet(this, _mutationCache).notify({
+        type: "observerAdded",
+        mutation: this,
+        observer
+      });
+    }
+  }
+  removeObserver(observer) {
+    __privateSet(this, _observers, __privateGet(this, _observers).filter((x) => x !== observer));
+    this.scheduleGc();
+    __privateGet(this, _mutationCache).notify({
+      type: "observerRemoved",
+      mutation: this,
+      observer
+    });
+  }
+  optionalRemove() {
+    if (!__privateGet(this, _observers).length) {
+      if (this.state.status === "pending") {
+        this.scheduleGc();
+      } else {
+        __privateGet(this, _mutationCache).remove(this);
+      }
+    }
+  }
+  continue() {
+    return __privateGet(this, _retryer2)?.continue() ?? // continuing a mutation assumes that variables are set, mutation must have been dehydrated before
+    this.execute(this.state.variables);
+  }
+  async execute(variables) {
+    const onContinue = () => {
+      __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "continue" });
+    };
+    __privateSet(this, _retryer2, createRetryer({
+      fn: () => {
+        if (!this.options.mutationFn) {
+          return Promise.reject(new Error("No mutationFn found"));
+        }
+        return this.options.mutationFn(variables);
+      },
+      onFail: (failureCount, error) => {
+        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "failed", failureCount, error });
+      },
+      onPause: () => {
+        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "pause" });
+      },
+      onContinue,
+      retry: this.options.retry ?? 0,
+      retryDelay: this.options.retryDelay,
+      networkMode: this.options.networkMode,
+      canRun: () => __privateGet(this, _mutationCache).canRun(this)
+    }));
+    const restored = this.state.status === "pending";
+    const isPaused = !__privateGet(this, _retryer2).canStart();
+    try {
+      if (restored) {
+        onContinue();
+      } else {
+        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "pending", variables, isPaused });
+        await __privateGet(this, _mutationCache).config.onMutate?.(
+          variables,
+          this
+        );
+        const context = await this.options.onMutate?.(variables);
+        if (context !== this.state.context) {
+          __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, {
+            type: "pending",
+            context,
+            variables,
+            isPaused
+          });
+        }
+      }
+      const data = await __privateGet(this, _retryer2).start();
+      await __privateGet(this, _mutationCache).config.onSuccess?.(
+        data,
+        variables,
+        this.state.context,
+        this
+      );
+      await this.options.onSuccess?.(data, variables, this.state.context);
+      await __privateGet(this, _mutationCache).config.onSettled?.(
+        data,
+        null,
+        this.state.variables,
+        this.state.context,
+        this
+      );
+      await this.options.onSettled?.(data, null, variables, this.state.context);
+      __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "success", data });
+      return data;
+    } catch (error) {
+      try {
+        await __privateGet(this, _mutationCache).config.onError?.(
+          error,
+          variables,
+          this.state.context,
+          this
+        );
+        await this.options.onError?.(
+          error,
+          variables,
+          this.state.context
+        );
+        await __privateGet(this, _mutationCache).config.onSettled?.(
+          void 0,
+          error,
+          this.state.variables,
+          this.state.context,
+          this
+        );
+        await this.options.onSettled?.(
+          void 0,
+          error,
+          variables,
+          this.state.context
+        );
+        throw error;
+      } finally {
+        __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "error", error });
+      }
+    } finally {
+      __privateGet(this, _mutationCache).runNext(this);
+    }
+  }
+}, _observers = new WeakMap(), _mutationCache = new WeakMap(), _retryer2 = new WeakMap(), _Mutation_instances = new WeakSet(), dispatch_fn2 = function(action) {
+  const reducer2 = (state) => {
+    switch (action.type) {
+      case "failed":
+        return {
+          ...state,
+          failureCount: action.failureCount,
+          failureReason: action.error
+        };
+      case "pause":
+        return {
+          ...state,
+          isPaused: true
+        };
+      case "continue":
+        return {
+          ...state,
+          isPaused: false
+        };
+      case "pending":
+        return {
+          ...state,
+          context: action.context,
+          data: void 0,
+          failureCount: 0,
+          failureReason: null,
+          error: null,
+          isPaused: action.isPaused,
+          status: "pending",
+          variables: action.variables,
+          submittedAt: Date.now()
+        };
+      case "success":
+        return {
+          ...state,
+          data: action.data,
+          failureCount: 0,
+          failureReason: null,
+          error: null,
+          status: "success",
+          isPaused: false
+        };
+      case "error":
+        return {
+          ...state,
+          data: void 0,
+          error: action.error,
+          failureCount: state.failureCount + 1,
+          failureReason: action.error,
+          isPaused: false,
+          status: "error"
+        };
+    }
+  };
+  this.state = reducer2(this.state);
+  notifyManager.batch(() => {
+    __privateGet(this, _observers).forEach((observer) => {
+      observer.onMutationUpdate(action);
+    });
+    __privateGet(this, _mutationCache).notify({
+      mutation: this,
+      type: "updated",
+      action
+    });
+  });
+}, _f);
+function getDefaultState() {
+  return {
+    context: void 0,
+    data: void 0,
+    error: null,
+    failureCount: 0,
+    failureReason: null,
+    isPaused: false,
+    status: "idle",
+    variables: void 0,
+    submittedAt: 0
+  };
+}
+var MutationCache = (_g = class extends Subscribable {
+  constructor(config = {}) {
+    super();
+    __privateAdd(this, _mutations);
+    __privateAdd(this, _scopes);
+    __privateAdd(this, _mutationId);
+    this.config = config;
+    __privateSet(this, _mutations, /* @__PURE__ */ new Set());
+    __privateSet(this, _scopes, /* @__PURE__ */ new Map());
+    __privateSet(this, _mutationId, 0);
+  }
+  build(client2, options, state) {
+    const mutation = new Mutation({
+      mutationCache: this,
+      mutationId: ++__privateWrapper(this, _mutationId)._,
+      options: client2.defaultMutationOptions(options),
+      state
+    });
+    this.add(mutation);
+    return mutation;
+  }
+  add(mutation) {
+    __privateGet(this, _mutations).add(mutation);
+    const scope = scopeFor(mutation);
+    if (typeof scope === "string") {
+      const scopedMutations = __privateGet(this, _scopes).get(scope);
+      if (scopedMutations) {
+        scopedMutations.push(mutation);
+      } else {
+        __privateGet(this, _scopes).set(scope, [mutation]);
+      }
+    }
+    this.notify({ type: "added", mutation });
+  }
+  remove(mutation) {
+    if (__privateGet(this, _mutations).delete(mutation)) {
+      const scope = scopeFor(mutation);
+      if (typeof scope === "string") {
+        const scopedMutations = __privateGet(this, _scopes).get(scope);
+        if (scopedMutations) {
+          if (scopedMutations.length > 1) {
+            const index2 = scopedMutations.indexOf(mutation);
+            if (index2 !== -1) {
+              scopedMutations.splice(index2, 1);
+            }
+          } else if (scopedMutations[0] === mutation) {
+            __privateGet(this, _scopes).delete(scope);
+          }
+        }
+      }
+    }
+    this.notify({ type: "removed", mutation });
+  }
+  canRun(mutation) {
+    const scope = scopeFor(mutation);
+    if (typeof scope === "string") {
+      const mutationsWithSameScope = __privateGet(this, _scopes).get(scope);
+      const firstPendingMutation = mutationsWithSameScope?.find(
+        (m2) => m2.state.status === "pending"
+      );
+      return !firstPendingMutation || firstPendingMutation === mutation;
+    } else {
+      return true;
+    }
+  }
+  runNext(mutation) {
+    const scope = scopeFor(mutation);
+    if (typeof scope === "string") {
+      const foundMutation = __privateGet(this, _scopes).get(scope)?.find((m2) => m2 !== mutation && m2.state.isPaused);
+      return foundMutation?.continue() ?? Promise.resolve();
+    } else {
+      return Promise.resolve();
+    }
+  }
+  clear() {
+    notifyManager.batch(() => {
+      __privateGet(this, _mutations).forEach((mutation) => {
+        this.notify({ type: "removed", mutation });
+      });
+      __privateGet(this, _mutations).clear();
+      __privateGet(this, _scopes).clear();
+    });
+  }
+  getAll() {
+    return Array.from(__privateGet(this, _mutations));
+  }
+  find(filters) {
+    const defaultedFilters = { exact: true, ...filters };
+    return this.getAll().find(
+      (mutation) => matchMutation(defaultedFilters, mutation)
+    );
+  }
+  findAll(filters = {}) {
+    return this.getAll().filter((mutation) => matchMutation(filters, mutation));
+  }
+  notify(event) {
+    notifyManager.batch(() => {
+      this.listeners.forEach((listener) => {
+        listener(event);
+      });
+    });
+  }
+  resumePausedMutations() {
+    const pausedMutations = this.getAll().filter((x) => x.state.isPaused);
+    return notifyManager.batch(
+      () => Promise.all(
+        pausedMutations.map((mutation) => mutation.continue().catch(noop$1))
+      )
+    );
+  }
+}, _mutations = new WeakMap(), _scopes = new WeakMap(), _mutationId = new WeakMap(), _g);
+function scopeFor(mutation) {
+  return mutation.options.scope?.id;
+}
+function infiniteQueryBehavior(pages) {
+  return {
+    onFetch: (context, query) => {
+      const options = context.options;
+      const direction = context.fetchOptions?.meta?.fetchMore?.direction;
+      const oldPages = context.state.data?.pages || [];
+      const oldPageParams = context.state.data?.pageParams || [];
+      let result = { pages: [], pageParams: [] };
+      let currentPage = 0;
+      const fetchFn = async () => {
+        let cancelled = false;
+        const addSignalProperty = (object) => {
+          Object.defineProperty(object, "signal", {
+            enumerable: true,
+            get: () => {
+              if (context.signal.aborted) {
+                cancelled = true;
+              } else {
+                context.signal.addEventListener("abort", () => {
+                  cancelled = true;
+                });
+              }
+              return context.signal;
+            }
+          });
+        };
+        const queryFn = ensureQueryFn(context.options, context.fetchOptions);
+        const fetchPage = async (data, param, previous) => {
+          if (cancelled) {
+            return Promise.reject();
+          }
+          if (param == null && data.pages.length) {
+            return Promise.resolve(data);
+          }
+          const createQueryFnContext = () => {
+            const queryFnContext2 = {
+              client: context.client,
+              queryKey: context.queryKey,
+              pageParam: param,
+              direction: previous ? "backward" : "forward",
+              meta: context.options.meta
+            };
+            addSignalProperty(queryFnContext2);
+            return queryFnContext2;
+          };
+          const queryFnContext = createQueryFnContext();
+          const page = await queryFn(queryFnContext);
+          const { maxPages } = context.options;
+          const addTo = previous ? addToStart : addToEnd;
+          return {
+            pages: addTo(data.pages, page, maxPages),
+            pageParams: addTo(data.pageParams, param, maxPages)
+          };
+        };
+        if (direction && oldPages.length) {
+          const previous = direction === "backward";
+          const pageParamFn = previous ? getPreviousPageParam : getNextPageParam;
+          const oldData = {
+            pages: oldPages,
+            pageParams: oldPageParams
+          };
+          const param = pageParamFn(options, oldData);
+          result = await fetchPage(oldData, param, previous);
+        } else {
+          const remainingPages = pages ?? oldPages.length;
+          do {
+            const param = currentPage === 0 ? oldPageParams[0] ?? options.initialPageParam : getNextPageParam(options, result);
+            if (currentPage > 0 && param == null) {
+              break;
+            }
+            result = await fetchPage(result, param);
+            currentPage++;
+          } while (currentPage < remainingPages);
+        }
+        return result;
+      };
+      if (context.options.persister) {
+        context.fetchFn = () => {
+          return context.options.persister?.(
+            fetchFn,
+            {
+              client: context.client,
+              queryKey: context.queryKey,
+              meta: context.options.meta,
+              signal: context.signal
+            },
+            query
+          );
+        };
+      } else {
+        context.fetchFn = fetchFn;
+      }
+    }
+  };
+}
+function getNextPageParam(options, { pages, pageParams }) {
+  const lastIndex = pages.length - 1;
+  return pages.length > 0 ? options.getNextPageParam(
+    pages[lastIndex],
+    pages,
+    pageParams[lastIndex],
+    pageParams
+  ) : void 0;
+}
+function getPreviousPageParam(options, { pages, pageParams }) {
+  return pages.length > 0 ? options.getPreviousPageParam?.(pages[0], pages, pageParams[0], pageParams) : void 0;
+}
+var QueryClient = (_h = class {
+  constructor(config = {}) {
+    __privateAdd(this, _queryCache);
+    __privateAdd(this, _mutationCache2);
+    __privateAdd(this, _defaultOptions2);
+    __privateAdd(this, _queryDefaults);
+    __privateAdd(this, _mutationDefaults);
+    __privateAdd(this, _mountCount);
+    __privateAdd(this, _unsubscribeFocus);
+    __privateAdd(this, _unsubscribeOnline);
+    __privateSet(this, _queryCache, config.queryCache || new QueryCache());
+    __privateSet(this, _mutationCache2, config.mutationCache || new MutationCache());
+    __privateSet(this, _defaultOptions2, config.defaultOptions || {});
+    __privateSet(this, _queryDefaults, /* @__PURE__ */ new Map());
+    __privateSet(this, _mutationDefaults, /* @__PURE__ */ new Map());
+    __privateSet(this, _mountCount, 0);
+  }
+  mount() {
+    __privateWrapper(this, _mountCount)._++;
+    if (__privateGet(this, _mountCount) !== 1) return;
+    __privateSet(this, _unsubscribeFocus, focusManager.subscribe(async (focused) => {
+      if (focused) {
+        await this.resumePausedMutations();
+        __privateGet(this, _queryCache).onFocus();
+      }
+    }));
+    __privateSet(this, _unsubscribeOnline, onlineManager.subscribe(async (online) => {
+      if (online) {
+        await this.resumePausedMutations();
+        __privateGet(this, _queryCache).onOnline();
+      }
+    }));
+  }
+  unmount() {
+    var _a2, _b2;
+    __privateWrapper(this, _mountCount)._--;
+    if (__privateGet(this, _mountCount) !== 0) return;
+    (_a2 = __privateGet(this, _unsubscribeFocus)) == null ? void 0 : _a2.call(this);
+    __privateSet(this, _unsubscribeFocus, void 0);
+    (_b2 = __privateGet(this, _unsubscribeOnline)) == null ? void 0 : _b2.call(this);
+    __privateSet(this, _unsubscribeOnline, void 0);
+  }
+  isFetching(filters) {
+    return __privateGet(this, _queryCache).findAll({ ...filters, fetchStatus: "fetching" }).length;
+  }
+  isMutating(filters) {
+    return __privateGet(this, _mutationCache2).findAll({ ...filters, status: "pending" }).length;
+  }
+  /**
+   * Imperative (non-reactive) way to retrieve data for a QueryKey.
+   * Should only be used in callbacks or functions where reading the latest data is necessary, e.g. for optimistic updates.
+   *
+   * Hint: Do not use this function inside a component, because it won't receive updates.
+   * Use `useQuery` to create a `QueryObserver` that subscribes to changes.
+   */
+  getQueryData(queryKey) {
+    const options = this.defaultQueryOptions({ queryKey });
+    return __privateGet(this, _queryCache).get(options.queryHash)?.state.data;
+  }
+  ensureQueryData(options) {
+    const defaultedOptions = this.defaultQueryOptions(options);
+    const query = __privateGet(this, _queryCache).build(this, defaultedOptions);
+    const cachedData = query.state.data;
+    if (cachedData === void 0) {
+      return this.fetchQuery(options);
+    }
+    if (options.revalidateIfStale && query.isStaleByTime(resolveStaleTime(defaultedOptions.staleTime, query))) {
+      void this.prefetchQuery(defaultedOptions);
+    }
+    return Promise.resolve(cachedData);
+  }
+  getQueriesData(filters) {
+    return __privateGet(this, _queryCache).findAll(filters).map(({ queryKey, state }) => {
+      const data = state.data;
+      return [queryKey, data];
+    });
+  }
+  setQueryData(queryKey, updater, options) {
+    const defaultedOptions = this.defaultQueryOptions({ queryKey });
+    const query = __privateGet(this, _queryCache).get(
+      defaultedOptions.queryHash
+    );
+    const prevData = query?.state.data;
+    const data = functionalUpdate(updater, prevData);
+    if (data === void 0) {
+      return void 0;
+    }
+    return __privateGet(this, _queryCache).build(this, defaultedOptions).setData(data, { ...options, manual: true });
+  }
+  setQueriesData(filters, updater, options) {
+    return notifyManager.batch(
+      () => __privateGet(this, _queryCache).findAll(filters).map(({ queryKey }) => [
+        queryKey,
+        this.setQueryData(queryKey, updater, options)
+      ])
+    );
+  }
+  getQueryState(queryKey) {
+    const options = this.defaultQueryOptions({ queryKey });
+    return __privateGet(this, _queryCache).get(
+      options.queryHash
+    )?.state;
+  }
+  removeQueries(filters) {
+    const queryCache = __privateGet(this, _queryCache);
+    notifyManager.batch(() => {
+      queryCache.findAll(filters).forEach((query) => {
+        queryCache.remove(query);
+      });
+    });
+  }
+  resetQueries(filters, options) {
+    const queryCache = __privateGet(this, _queryCache);
+    return notifyManager.batch(() => {
+      queryCache.findAll(filters).forEach((query) => {
+        query.reset();
+      });
+      return this.refetchQueries(
+        {
+          type: "active",
+          ...filters
+        },
+        options
+      );
+    });
+  }
+  cancelQueries(filters, cancelOptions = {}) {
+    const defaultedCancelOptions = { revert: true, ...cancelOptions };
+    const promises = notifyManager.batch(
+      () => __privateGet(this, _queryCache).findAll(filters).map((query) => query.cancel(defaultedCancelOptions))
+    );
+    return Promise.all(promises).then(noop$1).catch(noop$1);
+  }
+  invalidateQueries(filters, options = {}) {
+    return notifyManager.batch(() => {
+      __privateGet(this, _queryCache).findAll(filters).forEach((query) => {
+        query.invalidate();
+      });
+      if (filters?.refetchType === "none") {
+        return Promise.resolve();
+      }
+      return this.refetchQueries(
+        {
+          ...filters,
+          type: filters?.refetchType ?? filters?.type ?? "active"
+        },
+        options
+      );
+    });
+  }
+  refetchQueries(filters, options = {}) {
+    const fetchOptions = {
+      ...options,
+      cancelRefetch: options.cancelRefetch ?? true
+    };
+    const promises = notifyManager.batch(
+      () => __privateGet(this, _queryCache).findAll(filters).filter((query) => !query.isDisabled() && !query.isStatic()).map((query) => {
+        let promise = query.fetch(void 0, fetchOptions);
+        if (!fetchOptions.throwOnError) {
+          promise = promise.catch(noop$1);
+        }
+        return query.state.fetchStatus === "paused" ? Promise.resolve() : promise;
+      })
+    );
+    return Promise.all(promises).then(noop$1);
+  }
+  fetchQuery(options) {
+    const defaultedOptions = this.defaultQueryOptions(options);
+    if (defaultedOptions.retry === void 0) {
+      defaultedOptions.retry = false;
+    }
+    const query = __privateGet(this, _queryCache).build(this, defaultedOptions);
+    return query.isStaleByTime(
+      resolveStaleTime(defaultedOptions.staleTime, query)
+    ) ? query.fetch(defaultedOptions) : Promise.resolve(query.state.data);
+  }
+  prefetchQuery(options) {
+    return this.fetchQuery(options).then(noop$1).catch(noop$1);
+  }
+  fetchInfiniteQuery(options) {
+    options.behavior = infiniteQueryBehavior(options.pages);
+    return this.fetchQuery(options);
+  }
+  prefetchInfiniteQuery(options) {
+    return this.fetchInfiniteQuery(options).then(noop$1).catch(noop$1);
+  }
+  ensureInfiniteQueryData(options) {
+    options.behavior = infiniteQueryBehavior(options.pages);
+    return this.ensureQueryData(options);
+  }
+  resumePausedMutations() {
+    if (onlineManager.isOnline()) {
+      return __privateGet(this, _mutationCache2).resumePausedMutations();
+    }
+    return Promise.resolve();
+  }
+  getQueryCache() {
+    return __privateGet(this, _queryCache);
+  }
+  getMutationCache() {
+    return __privateGet(this, _mutationCache2);
+  }
+  getDefaultOptions() {
+    return __privateGet(this, _defaultOptions2);
+  }
+  setDefaultOptions(options) {
+    __privateSet(this, _defaultOptions2, options);
+  }
+  setQueryDefaults(queryKey, options) {
+    __privateGet(this, _queryDefaults).set(hashKey(queryKey), {
+      queryKey,
+      defaultOptions: options
+    });
+  }
+  getQueryDefaults(queryKey) {
+    const defaults = [...__privateGet(this, _queryDefaults).values()];
+    const result = {};
+    defaults.forEach((queryDefault) => {
+      if (partialMatchKey(queryKey, queryDefault.queryKey)) {
+        Object.assign(result, queryDefault.defaultOptions);
+      }
+    });
+    return result;
+  }
+  setMutationDefaults(mutationKey, options) {
+    __privateGet(this, _mutationDefaults).set(hashKey(mutationKey), {
+      mutationKey,
+      defaultOptions: options
+    });
+  }
+  getMutationDefaults(mutationKey) {
+    const defaults = [...__privateGet(this, _mutationDefaults).values()];
+    const result = {};
+    defaults.forEach((queryDefault) => {
+      if (partialMatchKey(mutationKey, queryDefault.mutationKey)) {
+        Object.assign(result, queryDefault.defaultOptions);
+      }
+    });
+    return result;
+  }
+  defaultQueryOptions(options) {
+    if (options._defaulted) {
+      return options;
+    }
+    const defaultedOptions = {
+      ...__privateGet(this, _defaultOptions2).queries,
+      ...this.getQueryDefaults(options.queryKey),
+      ...options,
+      _defaulted: true
+    };
+    if (!defaultedOptions.queryHash) {
+      defaultedOptions.queryHash = hashQueryKeyByOptions(
+        defaultedOptions.queryKey,
+        defaultedOptions
+      );
+    }
+    if (defaultedOptions.refetchOnReconnect === void 0) {
+      defaultedOptions.refetchOnReconnect = defaultedOptions.networkMode !== "always";
+    }
+    if (defaultedOptions.throwOnError === void 0) {
+      defaultedOptions.throwOnError = !!defaultedOptions.suspense;
+    }
+    if (!defaultedOptions.networkMode && defaultedOptions.persister) {
+      defaultedOptions.networkMode = "offlineFirst";
+    }
+    if (defaultedOptions.queryFn === skipToken) {
+      defaultedOptions.enabled = false;
+    }
+    return defaultedOptions;
+  }
+  defaultMutationOptions(options) {
+    if (options?._defaulted) {
+      return options;
+    }
+    return {
+      ...__privateGet(this, _defaultOptions2).mutations,
+      ...options?.mutationKey && this.getMutationDefaults(options.mutationKey),
+      ...options,
+      _defaulted: true
+    };
+  }
+  clear() {
+    __privateGet(this, _queryCache).clear();
+    __privateGet(this, _mutationCache2).clear();
+  }
+}, _queryCache = new WeakMap(), _mutationCache2 = new WeakMap(), _defaultOptions2 = new WeakMap(), _queryDefaults = new WeakMap(), _mutationDefaults = new WeakMap(), _mountCount = new WeakMap(), _unsubscribeFocus = new WeakMap(), _unsubscribeOnline = new WeakMap(), _h);
+var QueryObserver = (_i = class extends Subscribable {
+  constructor(client2, options) {
+    super();
+    __privateAdd(this, _QueryObserver_instances);
+    __privateAdd(this, _client2);
+    __privateAdd(this, _currentQuery);
+    __privateAdd(this, _currentQueryInitialState);
+    __privateAdd(this, _currentResult);
+    __privateAdd(this, _currentResultState);
+    __privateAdd(this, _currentResultOptions);
+    __privateAdd(this, _currentThenable);
+    __privateAdd(this, _selectError);
+    __privateAdd(this, _selectFn);
+    __privateAdd(this, _selectResult);
+    // This property keeps track of the last query with defined data.
+    // It will be used to pass the previous data and query to the placeholder function between renders.
+    __privateAdd(this, _lastQueryWithDefinedData);
+    __privateAdd(this, _staleTimeoutId);
+    __privateAdd(this, _refetchIntervalId);
+    __privateAdd(this, _currentRefetchInterval);
+    __privateAdd(this, _trackedProps, /* @__PURE__ */ new Set());
+    this.options = options;
+    __privateSet(this, _client2, client2);
+    __privateSet(this, _selectError, null);
+    __privateSet(this, _currentThenable, pendingThenable());
+    if (!this.options.experimental_prefetchInRender) {
+      __privateGet(this, _currentThenable).reject(
+        new Error("experimental_prefetchInRender feature flag is not enabled")
+      );
+    }
+    this.bindMethods();
+    this.setOptions(options);
+  }
+  bindMethods() {
+    this.refetch = this.refetch.bind(this);
+  }
+  onSubscribe() {
+    if (this.listeners.size === 1) {
+      __privateGet(this, _currentQuery).addObserver(this);
+      if (shouldFetchOnMount(__privateGet(this, _currentQuery), this.options)) {
+        __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this);
+      } else {
+        this.updateResult();
+      }
+      __privateMethod(this, _QueryObserver_instances, updateTimers_fn).call(this);
+    }
+  }
+  onUnsubscribe() {
+    if (!this.hasListeners()) {
+      this.destroy();
+    }
+  }
+  shouldFetchOnReconnect() {
+    return shouldFetchOn(
+      __privateGet(this, _currentQuery),
+      this.options,
+      this.options.refetchOnReconnect
+    );
+  }
+  shouldFetchOnWindowFocus() {
+    return shouldFetchOn(
+      __privateGet(this, _currentQuery),
+      this.options,
+      this.options.refetchOnWindowFocus
+    );
+  }
+  destroy() {
+    this.listeners = /* @__PURE__ */ new Set();
+    __privateMethod(this, _QueryObserver_instances, clearStaleTimeout_fn).call(this);
+    __privateMethod(this, _QueryObserver_instances, clearRefetchInterval_fn).call(this);
+    __privateGet(this, _currentQuery).removeObserver(this);
+  }
+  setOptions(options) {
+    const prevOptions = this.options;
+    const prevQuery = __privateGet(this, _currentQuery);
+    this.options = __privateGet(this, _client2).defaultQueryOptions(options);
+    if (this.options.enabled !== void 0 && typeof this.options.enabled !== "boolean" && typeof this.options.enabled !== "function" && typeof resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== "boolean") {
+      throw new Error(
+        "Expected enabled to be a boolean or a callback that returns a boolean"
+      );
+    }
+    __privateMethod(this, _QueryObserver_instances, updateQuery_fn).call(this);
+    __privateGet(this, _currentQuery).setOptions(this.options);
+    if (prevOptions._defaulted && !shallowEqualObjects(this.options, prevOptions)) {
+      __privateGet(this, _client2).getQueryCache().notify({
+        type: "observerOptionsUpdated",
+        query: __privateGet(this, _currentQuery),
+        observer: this
+      });
+    }
+    const mounted = this.hasListeners();
+    if (mounted && shouldFetchOptionally(
+      __privateGet(this, _currentQuery),
+      prevQuery,
+      this.options,
+      prevOptions
+    )) {
+      __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this);
+    }
+    this.updateResult();
+    if (mounted && (__privateGet(this, _currentQuery) !== prevQuery || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== resolveEnabled(prevOptions.enabled, __privateGet(this, _currentQuery)) || resolveStaleTime(this.options.staleTime, __privateGet(this, _currentQuery)) !== resolveStaleTime(prevOptions.staleTime, __privateGet(this, _currentQuery)))) {
+      __privateMethod(this, _QueryObserver_instances, updateStaleTimeout_fn).call(this);
+    }
+    const nextRefetchInterval = __privateMethod(this, _QueryObserver_instances, computeRefetchInterval_fn).call(this);
+    if (mounted && (__privateGet(this, _currentQuery) !== prevQuery || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) !== resolveEnabled(prevOptions.enabled, __privateGet(this, _currentQuery)) || nextRefetchInterval !== __privateGet(this, _currentRefetchInterval))) {
+      __privateMethod(this, _QueryObserver_instances, updateRefetchInterval_fn).call(this, nextRefetchInterval);
+    }
+  }
+  getOptimisticResult(options) {
+    const query = __privateGet(this, _client2).getQueryCache().build(__privateGet(this, _client2), options);
+    const result = this.createResult(query, options);
+    if (shouldAssignObserverCurrentProperties(this, result)) {
+      __privateSet(this, _currentResult, result);
+      __privateSet(this, _currentResultOptions, this.options);
+      __privateSet(this, _currentResultState, __privateGet(this, _currentQuery).state);
+    }
+    return result;
+  }
+  getCurrentResult() {
+    return __privateGet(this, _currentResult);
+  }
+  trackResult(result, onPropTracked) {
+    return new Proxy(result, {
+      get: (target, key) => {
+        this.trackProp(key);
+        onPropTracked?.(key);
+        return Reflect.get(target, key);
+      }
+    });
+  }
+  trackProp(key) {
+    __privateGet(this, _trackedProps).add(key);
+  }
+  getCurrentQuery() {
+    return __privateGet(this, _currentQuery);
+  }
+  refetch({ ...options } = {}) {
+    return this.fetch({
+      ...options
+    });
+  }
+  fetchOptimistic(options) {
+    const defaultedOptions = __privateGet(this, _client2).defaultQueryOptions(options);
+    const query = __privateGet(this, _client2).getQueryCache().build(__privateGet(this, _client2), defaultedOptions);
+    return query.fetch().then(() => this.createResult(query, defaultedOptions));
+  }
+  fetch(fetchOptions) {
+    return __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this, {
+      ...fetchOptions,
+      cancelRefetch: fetchOptions.cancelRefetch ?? true
+    }).then(() => {
+      this.updateResult();
+      return __privateGet(this, _currentResult);
+    });
+  }
+  createResult(query, options) {
+    const prevQuery = __privateGet(this, _currentQuery);
+    const prevOptions = this.options;
+    const prevResult = __privateGet(this, _currentResult);
+    const prevResultState = __privateGet(this, _currentResultState);
+    const prevResultOptions = __privateGet(this, _currentResultOptions);
+    const queryChange = query !== prevQuery;
+    const queryInitialState = queryChange ? query.state : __privateGet(this, _currentQueryInitialState);
+    const { state } = query;
+    let newState = { ...state };
+    let isPlaceholderData = false;
+    let data;
+    if (options._optimisticResults) {
+      const mounted = this.hasListeners();
+      const fetchOnMount = !mounted && shouldFetchOnMount(query, options);
+      const fetchOptionally = mounted && shouldFetchOptionally(query, prevQuery, options, prevOptions);
+      if (fetchOnMount || fetchOptionally) {
+        newState = {
+          ...newState,
+          ...fetchState(state.data, query.options)
+        };
+      }
+      if (options._optimisticResults === "isRestoring") {
+        newState.fetchStatus = "idle";
+      }
+    }
+    let { error, errorUpdatedAt, status } = newState;
+    data = newState.data;
+    let skipSelect = false;
+    if (options.placeholderData !== void 0 && data === void 0 && status === "pending") {
+      let placeholderData;
+      if (prevResult?.isPlaceholderData && options.placeholderData === prevResultOptions?.placeholderData) {
+        placeholderData = prevResult.data;
+        skipSelect = true;
+      } else {
+        placeholderData = typeof options.placeholderData === "function" ? options.placeholderData(
+          __privateGet(this, _lastQueryWithDefinedData)?.state.data,
+          __privateGet(this, _lastQueryWithDefinedData)
+        ) : options.placeholderData;
+      }
+      if (placeholderData !== void 0) {
+        status = "success";
+        data = replaceData(
+          prevResult?.data,
+          placeholderData,
+          options
+        );
+        isPlaceholderData = true;
+      }
+    }
+    if (options.select && data !== void 0 && !skipSelect) {
+      if (prevResult && data === prevResultState?.data && options.select === __privateGet(this, _selectFn)) {
+        data = __privateGet(this, _selectResult);
+      } else {
+        try {
+          __privateSet(this, _selectFn, options.select);
+          data = options.select(data);
+          data = replaceData(prevResult?.data, data, options);
+          __privateSet(this, _selectResult, data);
+          __privateSet(this, _selectError, null);
+        } catch (selectError) {
+          __privateSet(this, _selectError, selectError);
+        }
+      }
+    }
+    if (__privateGet(this, _selectError)) {
+      error = __privateGet(this, _selectError);
+      data = __privateGet(this, _selectResult);
+      errorUpdatedAt = Date.now();
+      status = "error";
+    }
+    const isFetching = newState.fetchStatus === "fetching";
+    const isPending = status === "pending";
+    const isError = status === "error";
+    const isLoading = isPending && isFetching;
+    const hasData = data !== void 0;
+    const result = {
+      status,
+      fetchStatus: newState.fetchStatus,
+      isPending,
+      isSuccess: status === "success",
+      isError,
+      isInitialLoading: isLoading,
+      isLoading,
+      data,
+      dataUpdatedAt: newState.dataUpdatedAt,
+      error,
+      errorUpdatedAt,
+      failureCount: newState.fetchFailureCount,
+      failureReason: newState.fetchFailureReason,
+      errorUpdateCount: newState.errorUpdateCount,
+      isFetched: newState.dataUpdateCount > 0 || newState.errorUpdateCount > 0,
+      isFetchedAfterMount: newState.dataUpdateCount > queryInitialState.dataUpdateCount || newState.errorUpdateCount > queryInitialState.errorUpdateCount,
+      isFetching,
+      isRefetching: isFetching && !isPending,
+      isLoadingError: isError && !hasData,
+      isPaused: newState.fetchStatus === "paused",
+      isPlaceholderData,
+      isRefetchError: isError && hasData,
+      isStale: isStale(query, options),
+      refetch: this.refetch,
+      promise: __privateGet(this, _currentThenable)
+    };
+    const nextResult = result;
+    if (this.options.experimental_prefetchInRender) {
+      const finalizeThenableIfPossible = (thenable) => {
+        if (nextResult.status === "error") {
+          thenable.reject(nextResult.error);
+        } else if (nextResult.data !== void 0) {
+          thenable.resolve(nextResult.data);
+        }
+      };
+      const recreateThenable = () => {
+        const pending = __privateSet(this, _currentThenable, nextResult.promise = pendingThenable());
+        finalizeThenableIfPossible(pending);
+      };
+      const prevThenable = __privateGet(this, _currentThenable);
+      switch (prevThenable.status) {
+        case "pending":
+          if (query.queryHash === prevQuery.queryHash) {
+            finalizeThenableIfPossible(prevThenable);
+          }
+          break;
+        case "fulfilled":
+          if (nextResult.status === "error" || nextResult.data !== prevThenable.value) {
+            recreateThenable();
+          }
+          break;
+        case "rejected":
+          if (nextResult.status !== "error" || nextResult.error !== prevThenable.reason) {
+            recreateThenable();
+          }
+          break;
+      }
+    }
+    return nextResult;
+  }
+  updateResult() {
+    const prevResult = __privateGet(this, _currentResult);
+    const nextResult = this.createResult(__privateGet(this, _currentQuery), this.options);
+    __privateSet(this, _currentResultState, __privateGet(this, _currentQuery).state);
+    __privateSet(this, _currentResultOptions, this.options);
+    if (__privateGet(this, _currentResultState).data !== void 0) {
+      __privateSet(this, _lastQueryWithDefinedData, __privateGet(this, _currentQuery));
+    }
+    if (shallowEqualObjects(nextResult, prevResult)) {
+      return;
+    }
+    __privateSet(this, _currentResult, nextResult);
+    const shouldNotifyListeners = () => {
+      if (!prevResult) {
+        return true;
+      }
+      const { notifyOnChangeProps } = this.options;
+      const notifyOnChangePropsValue = typeof notifyOnChangeProps === "function" ? notifyOnChangeProps() : notifyOnChangeProps;
+      if (notifyOnChangePropsValue === "all" || !notifyOnChangePropsValue && !__privateGet(this, _trackedProps).size) {
+        return true;
+      }
+      const includedProps = new Set(
+        notifyOnChangePropsValue ?? __privateGet(this, _trackedProps)
+      );
+      if (this.options.throwOnError) {
+        includedProps.add("error");
+      }
+      return Object.keys(__privateGet(this, _currentResult)).some((key) => {
+        const typedKey = key;
+        const changed = __privateGet(this, _currentResult)[typedKey] !== prevResult[typedKey];
+        return changed && includedProps.has(typedKey);
+      });
+    };
+    __privateMethod(this, _QueryObserver_instances, notify_fn).call(this, { listeners: shouldNotifyListeners() });
+  }
+  onQueryUpdate() {
+    this.updateResult();
+    if (this.hasListeners()) {
+      __privateMethod(this, _QueryObserver_instances, updateTimers_fn).call(this);
+    }
+  }
+}, _client2 = new WeakMap(), _currentQuery = new WeakMap(), _currentQueryInitialState = new WeakMap(), _currentResult = new WeakMap(), _currentResultState = new WeakMap(), _currentResultOptions = new WeakMap(), _currentThenable = new WeakMap(), _selectError = new WeakMap(), _selectFn = new WeakMap(), _selectResult = new WeakMap(), _lastQueryWithDefinedData = new WeakMap(), _staleTimeoutId = new WeakMap(), _refetchIntervalId = new WeakMap(), _currentRefetchInterval = new WeakMap(), _trackedProps = new WeakMap(), _QueryObserver_instances = new WeakSet(), executeFetch_fn = function(fetchOptions) {
+  __privateMethod(this, _QueryObserver_instances, updateQuery_fn).call(this);
+  let promise = __privateGet(this, _currentQuery).fetch(
+    this.options,
+    fetchOptions
+  );
+  if (!fetchOptions?.throwOnError) {
+    promise = promise.catch(noop$1);
+  }
+  return promise;
+}, updateStaleTimeout_fn = function() {
+  __privateMethod(this, _QueryObserver_instances, clearStaleTimeout_fn).call(this);
+  const staleTime = resolveStaleTime(
+    this.options.staleTime,
+    __privateGet(this, _currentQuery)
+  );
+  if (isServer || __privateGet(this, _currentResult).isStale || !isValidTimeout(staleTime)) {
+    return;
+  }
+  const time2 = timeUntilStale(__privateGet(this, _currentResult).dataUpdatedAt, staleTime);
+  const timeout = time2 + 1;
+  __privateSet(this, _staleTimeoutId, setTimeout(() => {
+    if (!__privateGet(this, _currentResult).isStale) {
+      this.updateResult();
+    }
+  }, timeout));
+}, computeRefetchInterval_fn = function() {
+  return (typeof this.options.refetchInterval === "function" ? this.options.refetchInterval(__privateGet(this, _currentQuery)) : this.options.refetchInterval) ?? false;
+}, updateRefetchInterval_fn = function(nextInterval) {
+  __privateMethod(this, _QueryObserver_instances, clearRefetchInterval_fn).call(this);
+  __privateSet(this, _currentRefetchInterval, nextInterval);
+  if (isServer || resolveEnabled(this.options.enabled, __privateGet(this, _currentQuery)) === false || !isValidTimeout(__privateGet(this, _currentRefetchInterval)) || __privateGet(this, _currentRefetchInterval) === 0) {
+    return;
+  }
+  __privateSet(this, _refetchIntervalId, setInterval(() => {
+    if (this.options.refetchIntervalInBackground || focusManager.isFocused()) {
+      __privateMethod(this, _QueryObserver_instances, executeFetch_fn).call(this);
+    }
+  }, __privateGet(this, _currentRefetchInterval)));
+}, updateTimers_fn = function() {
+  __privateMethod(this, _QueryObserver_instances, updateStaleTimeout_fn).call(this);
+  __privateMethod(this, _QueryObserver_instances, updateRefetchInterval_fn).call(this, __privateMethod(this, _QueryObserver_instances, computeRefetchInterval_fn).call(this));
+}, clearStaleTimeout_fn = function() {
+  if (__privateGet(this, _staleTimeoutId)) {
+    clearTimeout(__privateGet(this, _staleTimeoutId));
+    __privateSet(this, _staleTimeoutId, void 0);
+  }
+}, clearRefetchInterval_fn = function() {
+  if (__privateGet(this, _refetchIntervalId)) {
+    clearInterval(__privateGet(this, _refetchIntervalId));
+    __privateSet(this, _refetchIntervalId, void 0);
+  }
+}, updateQuery_fn = function() {
+  const query = __privateGet(this, _client2).getQueryCache().build(__privateGet(this, _client2), this.options);
+  if (query === __privateGet(this, _currentQuery)) {
+    return;
+  }
+  const prevQuery = __privateGet(this, _currentQuery);
+  __privateSet(this, _currentQuery, query);
+  __privateSet(this, _currentQueryInitialState, query.state);
+  if (this.hasListeners()) {
+    prevQuery?.removeObserver(this);
+    query.addObserver(this);
+  }
+}, notify_fn = function(notifyOptions) {
+  notifyManager.batch(() => {
+    if (notifyOptions.listeners) {
+      this.listeners.forEach((listener) => {
+        listener(__privateGet(this, _currentResult));
+      });
+    }
+    __privateGet(this, _client2).getQueryCache().notify({
+      query: __privateGet(this, _currentQuery),
+      type: "observerResultsUpdated"
+    });
+  });
+}, _i);
+function shouldLoadOnMount(query, options) {
+  return resolveEnabled(options.enabled, query) !== false && query.state.data === void 0 && !(query.state.status === "error" && options.retryOnMount === false);
+}
+function shouldFetchOnMount(query, options) {
+  return shouldLoadOnMount(query, options) || query.state.data !== void 0 && shouldFetchOn(query, options, options.refetchOnMount);
+}
+function shouldFetchOn(query, options, field) {
+  if (resolveEnabled(options.enabled, query) !== false && resolveStaleTime(options.staleTime, query) !== "static") {
+    const value = typeof field === "function" ? field(query) : field;
+    return value === "always" || value !== false && isStale(query, options);
+  }
+  return false;
+}
+function shouldFetchOptionally(query, prevQuery, options, prevOptions) {
+  return (query !== prevQuery || resolveEnabled(prevOptions.enabled, query) === false) && (!options.suspense || query.state.status !== "error") && isStale(query, options);
+}
+function isStale(query, options) {
+  return resolveEnabled(options.enabled, query) !== false && query.isStaleByTime(resolveStaleTime(options.staleTime, query));
+}
+function shouldAssignObserverCurrentProperties(observer, optimisticResult) {
+  if (!shallowEqualObjects(observer.getCurrentResult(), optimisticResult)) {
+    return true;
+  }
+  return false;
+}
+var MutationObserver$1 = (_j = class extends Subscribable {
+  constructor(client2, options) {
+    super();
+    __privateAdd(this, _MutationObserver_instances);
+    __privateAdd(this, _client3);
+    __privateAdd(this, _currentResult2);
+    __privateAdd(this, _currentMutation);
+    __privateAdd(this, _mutateOptions);
+    __privateSet(this, _client3, client2);
+    this.setOptions(options);
+    this.bindMethods();
+    __privateMethod(this, _MutationObserver_instances, updateResult_fn).call(this);
+  }
+  bindMethods() {
+    this.mutate = this.mutate.bind(this);
+    this.reset = this.reset.bind(this);
+  }
+  setOptions(options) {
+    const prevOptions = this.options;
+    this.options = __privateGet(this, _client3).defaultMutationOptions(options);
+    if (!shallowEqualObjects(this.options, prevOptions)) {
+      __privateGet(this, _client3).getMutationCache().notify({
+        type: "observerOptionsUpdated",
+        mutation: __privateGet(this, _currentMutation),
+        observer: this
+      });
+    }
+    if (prevOptions?.mutationKey && this.options.mutationKey && hashKey(prevOptions.mutationKey) !== hashKey(this.options.mutationKey)) {
+      this.reset();
+    } else if (__privateGet(this, _currentMutation)?.state.status === "pending") {
+      __privateGet(this, _currentMutation).setOptions(this.options);
+    }
+  }
+  onUnsubscribe() {
+    if (!this.hasListeners()) {
+      __privateGet(this, _currentMutation)?.removeObserver(this);
+    }
+  }
+  onMutationUpdate(action) {
+    __privateMethod(this, _MutationObserver_instances, updateResult_fn).call(this);
+    __privateMethod(this, _MutationObserver_instances, notify_fn2).call(this, action);
+  }
+  getCurrentResult() {
+    return __privateGet(this, _currentResult2);
+  }
+  reset() {
+    __privateGet(this, _currentMutation)?.removeObserver(this);
+    __privateSet(this, _currentMutation, void 0);
+    __privateMethod(this, _MutationObserver_instances, updateResult_fn).call(this);
+    __privateMethod(this, _MutationObserver_instances, notify_fn2).call(this);
+  }
+  mutate(variables, options) {
+    __privateSet(this, _mutateOptions, options);
+    __privateGet(this, _currentMutation)?.removeObserver(this);
+    __privateSet(this, _currentMutation, __privateGet(this, _client3).getMutationCache().build(__privateGet(this, _client3), this.options));
+    __privateGet(this, _currentMutation).addObserver(this);
+    return __privateGet(this, _currentMutation).execute(variables);
+  }
+}, _client3 = new WeakMap(), _currentResult2 = new WeakMap(), _currentMutation = new WeakMap(), _mutateOptions = new WeakMap(), _MutationObserver_instances = new WeakSet(), updateResult_fn = function() {
+  const state = __privateGet(this, _currentMutation)?.state ?? getDefaultState();
+  __privateSet(this, _currentResult2, {
+    ...state,
+    isPending: state.status === "pending",
+    isSuccess: state.status === "success",
+    isError: state.status === "error",
+    isIdle: state.status === "idle",
+    mutate: this.mutate,
+    reset: this.reset
+  });
+}, notify_fn2 = function(action) {
+  notifyManager.batch(() => {
+    if (__privateGet(this, _mutateOptions) && this.hasListeners()) {
+      const variables = __privateGet(this, _currentResult2).variables;
+      const context = __privateGet(this, _currentResult2).context;
+      if (action?.type === "success") {
+        __privateGet(this, _mutateOptions).onSuccess?.(action.data, variables, context);
+        __privateGet(this, _mutateOptions).onSettled?.(action.data, null, variables, context);
+      } else if (action?.type === "error") {
+        __privateGet(this, _mutateOptions).onError?.(action.error, variables, context);
+        __privateGet(this, _mutateOptions).onSettled?.(
+          void 0,
+          action.error,
+          variables,
+          context
+        );
+      }
+    }
+    this.listeners.forEach((listener) => {
+      listener(__privateGet(this, _currentResult2));
+    });
+  });
+}, _j);
+var QueryClientContext = reactExports.createContext(
+  void 0
+);
+var useQueryClient = (queryClient2) => {
+  const client2 = reactExports.useContext(QueryClientContext);
+  if (!client2) {
+    throw new Error("No QueryClient set, use QueryClientProvider to set one");
+  }
+  return client2;
+};
+var QueryClientProvider = ({
+  client: client2,
+  children
+}) => {
+  reactExports.useEffect(() => {
+    client2.mount();
+    return () => {
+      client2.unmount();
+    };
+  }, [client2]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientContext.Provider, { value: client2, children });
+};
+var IsRestoringContext = reactExports.createContext(false);
+var useIsRestoring = () => reactExports.useContext(IsRestoringContext);
+IsRestoringContext.Provider;
+function createValue() {
+  let isReset = false;
+  return {
+    clearReset: () => {
+      isReset = false;
+    },
+    reset: () => {
+      isReset = true;
+    },
+    isReset: () => {
+      return isReset;
+    }
+  };
+}
+var QueryErrorResetBoundaryContext = reactExports.createContext(createValue());
+var useQueryErrorResetBoundary = () => reactExports.useContext(QueryErrorResetBoundaryContext);
+var ensurePreventErrorBoundaryRetry = (options, errorResetBoundary) => {
+  if (options.suspense || options.throwOnError || options.experimental_prefetchInRender) {
+    if (!errorResetBoundary.isReset()) {
+      options.retryOnMount = false;
+    }
+  }
+};
+var useClearResetErrorBoundary = (errorResetBoundary) => {
+  reactExports.useEffect(() => {
+    errorResetBoundary.clearReset();
+  }, [errorResetBoundary]);
+};
+var getHasError = ({
+  result,
+  errorResetBoundary,
+  throwOnError,
+  query,
+  suspense
+}) => {
+  return result.isError && !errorResetBoundary.isReset() && !result.isFetching && query && (suspense && result.data === void 0 || shouldThrowError(throwOnError, [result.error, query]));
+};
+var ensureSuspenseTimers = (defaultedOptions) => {
+  if (defaultedOptions.suspense) {
+    const clamp2 = (value) => value === "static" ? value : Math.max(value ?? 1e3, 1e3);
+    const originalStaleTime = defaultedOptions.staleTime;
+    defaultedOptions.staleTime = typeof originalStaleTime === "function" ? (...args) => clamp2(originalStaleTime(...args)) : clamp2(originalStaleTime);
+    if (typeof defaultedOptions.gcTime === "number") {
+      defaultedOptions.gcTime = Math.max(defaultedOptions.gcTime, 1e3);
+    }
+  }
+};
+var willFetch = (result, isRestoring) => result.isLoading && result.isFetching && !isRestoring;
+var shouldSuspend = (defaultedOptions, result) => defaultedOptions?.suspense && result.isPending;
+var fetchOptimistic = (defaultedOptions, observer, errorResetBoundary) => observer.fetchOptimistic(defaultedOptions).catch(() => {
+  errorResetBoundary.clearReset();
+});
+function useBaseQuery(options, Observer, queryClient2) {
+  const isRestoring = useIsRestoring();
+  const errorResetBoundary = useQueryErrorResetBoundary();
+  const client2 = useQueryClient();
+  const defaultedOptions = client2.defaultQueryOptions(options);
+  client2.getDefaultOptions().queries?._experimental_beforeQuery?.(
+    defaultedOptions
+  );
+  defaultedOptions._optimisticResults = isRestoring ? "isRestoring" : "optimistic";
+  ensureSuspenseTimers(defaultedOptions);
+  ensurePreventErrorBoundaryRetry(defaultedOptions, errorResetBoundary);
+  useClearResetErrorBoundary(errorResetBoundary);
+  const isNewCacheEntry = !client2.getQueryCache().get(defaultedOptions.queryHash);
+  const [observer] = reactExports.useState(
+    () => new Observer(
+      client2,
+      defaultedOptions
+    )
+  );
+  const result = observer.getOptimisticResult(defaultedOptions);
+  const shouldSubscribe = !isRestoring && options.subscribed !== false;
+  reactExports.useSyncExternalStore(
+    reactExports.useCallback(
+      (onStoreChange) => {
+        const unsubscribe = shouldSubscribe ? observer.subscribe(notifyManager.batchCalls(onStoreChange)) : noop$1;
+        observer.updateResult();
+        return unsubscribe;
+      },
+      [observer, shouldSubscribe]
+    ),
+    () => observer.getCurrentResult(),
+    () => observer.getCurrentResult()
+  );
+  reactExports.useEffect(() => {
+    observer.setOptions(defaultedOptions);
+  }, [defaultedOptions, observer]);
+  if (shouldSuspend(defaultedOptions, result)) {
+    throw fetchOptimistic(defaultedOptions, observer, errorResetBoundary);
+  }
+  if (getHasError({
+    result,
+    errorResetBoundary,
+    throwOnError: defaultedOptions.throwOnError,
+    query: client2.getQueryCache().get(defaultedOptions.queryHash),
+    suspense: defaultedOptions.suspense
+  })) {
+    throw result.error;
+  }
+  client2.getDefaultOptions().queries?._experimental_afterQuery?.(
+    defaultedOptions,
+    result
+  );
+  if (defaultedOptions.experimental_prefetchInRender && !isServer && willFetch(result, isRestoring)) {
+    const promise = isNewCacheEntry ? (
+      // Fetch immediately on render in order to ensure `.promise` is resolved even if the component is unmounted
+      fetchOptimistic(defaultedOptions, observer, errorResetBoundary)
+    ) : (
+      // subscribe to the "cache promise" so that we can finalize the currentThenable once data comes in
+      client2.getQueryCache().get(defaultedOptions.queryHash)?.promise
+    );
+    promise?.catch(noop$1).finally(() => {
+      observer.updateResult();
+    });
+  }
+  return !defaultedOptions.notifyOnChangeProps ? observer.trackResult(result) : result;
+}
+function useQuery(options, queryClient2) {
+  return useBaseQuery(options, QueryObserver);
+}
+function useMutation(options, queryClient2) {
+  const client2 = useQueryClient();
+  const [observer] = reactExports.useState(
+    () => new MutationObserver$1(
+      client2,
+      options
+    )
+  );
+  reactExports.useEffect(() => {
+    observer.setOptions(options);
+  }, [observer, options]);
+  const result = reactExports.useSyncExternalStore(
+    reactExports.useCallback(
+      (onStoreChange) => observer.subscribe(notifyManager.batchCalls(onStoreChange)),
+      [observer]
+    ),
+    () => observer.getCurrentResult(),
+    () => observer.getCurrentResult()
+  );
+  const mutate = reactExports.useCallback(
+    (variables, mutateOptions) => {
+      observer.mutate(variables, mutateOptions).catch(noop$1);
+    },
+    [observer]
+  );
+  if (result.error && shouldThrowError(observer.options.throwOnError, [result.error])) {
+    throw result.error;
+  }
+  return { ...result, mutate, mutateAsync: result.mutate };
+}
+function parse$1(input, loose) {
+  if (input instanceof RegExp) return { keys: false, pattern: input };
+  var c2, o2, tmp, ext, keys = [], pattern = "", arr = input.split("/");
+  arr[0] || arr.shift();
+  while (tmp = arr.shift()) {
+    c2 = tmp[0];
+    if (c2 === "*") {
+      keys.push(c2);
+      pattern += tmp[1] === "?" ? "(?:/(.*))?" : "/(.*)";
+    } else if (c2 === ":") {
+      o2 = tmp.indexOf("?", 1);
+      ext = tmp.indexOf(".", 1);
+      keys.push(tmp.substring(1, !!~o2 ? o2 : !!~ext ? ext : tmp.length));
+      pattern += !!~o2 && !~ext ? "(?:/([^/]+?))?" : "/([^/]+?)";
+      if (!!~ext) pattern += (!!~o2 ? "?" : "") + "\\" + tmp.substring(ext);
+    } else {
+      pattern += "/" + tmp;
+    }
+  }
+  return {
+    keys,
+    pattern: new RegExp("^" + pattern + (loose ? "(?=$|/)" : "/?$"), "i")
+  };
+}
+var shim = { exports: {} };
+var useSyncExternalStoreShim_production = {};
+/**
+ * @license React
+ * use-sync-external-store-shim.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+var hasRequiredUseSyncExternalStoreShim_production;
+function requireUseSyncExternalStoreShim_production() {
+  if (hasRequiredUseSyncExternalStoreShim_production) return useSyncExternalStoreShim_production;
+  hasRequiredUseSyncExternalStoreShim_production = 1;
+  var React2 = requireReact();
+  function is2(x, y) {
+    return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
+  }
+  var objectIs = "function" === typeof Object.is ? Object.is : is2, useState = React2.useState, useEffect = React2.useEffect, useLayoutEffect = React2.useLayoutEffect, useDebugValue = React2.useDebugValue;
+  function useSyncExternalStore$2(subscribe2, getSnapshot) {
+    var value = getSnapshot(), _useState = useState({ inst: { value, getSnapshot } }), inst = _useState[0].inst, forceUpdate = _useState[1];
+    useLayoutEffect(
+      function() {
+        inst.value = value;
+        inst.getSnapshot = getSnapshot;
+        checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+      },
+      [subscribe2, value, getSnapshot]
+    );
+    useEffect(
+      function() {
+        checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+        return subscribe2(function() {
+          checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+        });
+      },
+      [subscribe2]
+    );
+    useDebugValue(value);
+    return value;
+  }
+  function checkIfSnapshotChanged(inst) {
+    var latestGetSnapshot = inst.getSnapshot;
+    inst = inst.value;
+    try {
+      var nextValue = latestGetSnapshot();
+      return !objectIs(inst, nextValue);
+    } catch (error) {
+      return true;
+    }
+  }
+  function useSyncExternalStore$1(subscribe2, getSnapshot) {
+    return getSnapshot();
+  }
+  var shim2 = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+  useSyncExternalStoreShim_production.useSyncExternalStore = void 0 !== React2.useSyncExternalStore ? React2.useSyncExternalStore : shim2;
+  return useSyncExternalStoreShim_production;
+}
+var hasRequiredShim;
+function requireShim() {
+  if (hasRequiredShim) return shim.exports;
+  hasRequiredShim = 1;
+  {
+    shim.exports = requireUseSyncExternalStoreShim_production();
+  }
+  return shim.exports;
+}
+var shimExports = requireShim();
+const useBuiltinInsertionEffect = React$1["useInsertionEffect"];
+const canUseDOM = !!(typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.document.createElement !== "undefined");
+const useIsomorphicLayoutEffect$2 = canUseDOM ? reactExports.useLayoutEffect : reactExports.useEffect;
+const useInsertionEffect = useBuiltinInsertionEffect || useIsomorphicLayoutEffect$2;
+const useEvent = (fn) => {
+  const ref = reactExports.useRef([fn, (...args) => ref[0](...args)]).current;
+  useInsertionEffect(() => {
+    ref[0] = fn;
+  });
+  return ref[1];
+};
+const eventPopstate = "popstate";
+const eventPushState = "pushState";
+const eventReplaceState = "replaceState";
+const eventHashchange = "hashchange";
+const events = [
+  eventPopstate,
+  eventPushState,
+  eventReplaceState,
+  eventHashchange
+];
+const subscribeToLocationUpdates = (callback) => {
+  for (const event of events) {
+    addEventListener(event, callback);
+  }
+  return () => {
+    for (const event of events) {
+      removeEventListener(event, callback);
+    }
+  };
+};
+const useLocationProperty = (fn, ssrFn) => shimExports.useSyncExternalStore(subscribeToLocationUpdates, fn, ssrFn);
+const currentSearch = () => location.search;
+const useSearch = ({ ssrSearch = "" } = {}) => useLocationProperty(currentSearch, () => ssrSearch);
+const currentPathname = () => location.pathname;
+const usePathname = ({ ssrPath } = {}) => useLocationProperty(
+  currentPathname,
+  ssrPath ? () => ssrPath : currentPathname
+);
+const navigate = (to, { replace = false, state = null } = {}) => history[replace ? eventReplaceState : eventPushState](state, "", to);
+const useBrowserLocation = (opts = {}) => [usePathname(opts), navigate];
+const patchKey = Symbol.for("wouter_v3");
+if (typeof history !== "undefined" && typeof window[patchKey] === "undefined") {
+  for (const type of [eventPushState, eventReplaceState]) {
+    const original = history[type];
+    history[type] = function() {
+      const result = original.apply(this, arguments);
+      const event = new Event(type);
+      event.arguments = arguments;
+      dispatchEvent(event);
+      return result;
+    };
+  }
+  Object.defineProperty(window, patchKey, { value: true });
+}
+const _relativePath = (base, path) => !path.toLowerCase().indexOf(base.toLowerCase()) ? path.slice(base.length) || "/" : "~" + path;
+const baseDefaults = (base = "") => base === "/" ? "" : base;
+const absolutePath = (to, base) => to[0] === "~" ? to.slice(1) : baseDefaults(base) + to;
+const relativePath = (base = "", path) => _relativePath(unescape(baseDefaults(base)), unescape(path));
+const unescape = (str) => {
+  try {
+    return decodeURI(str);
+  } catch (_e2) {
+    return str;
+  }
+};
+const defaultRouter = {
+  hook: useBrowserLocation,
+  searchHook: useSearch,
+  parser: parse$1,
+  base: "",
+  // this option is used to override the current location during SSR
+  ssrPath: void 0,
+  ssrSearch: void 0,
+  // optional context to track render state during SSR
+  ssrContext: void 0,
+  // customizes how `href` props are transformed for <Link />
+  hrefs: (x) => x
+};
+const RouterCtx = reactExports.createContext(defaultRouter);
+const useRouter = () => reactExports.useContext(RouterCtx);
+const Params0 = {}, ParamsCtx = reactExports.createContext(Params0);
+const useParams = () => reactExports.useContext(ParamsCtx);
+const useLocationFromRouter = (router) => {
+  const [location2, navigate2] = router.hook(router);
+  return [
+    relativePath(router.base, location2),
+    useEvent((to, navOpts) => navigate2(absolutePath(to, router.base), navOpts))
+  ];
+};
+const useLocation = () => useLocationFromRouter(useRouter());
+const matchRoute = (parser, route, path, loose) => {
+  const { pattern, keys } = route instanceof RegExp ? { keys: false, pattern: route } : parser(route || "*", loose);
+  const result = pattern.exec(path) || [];
+  const [$base, ...matches] = result;
+  return $base !== void 0 ? [
+    true,
+    (() => {
+      const groups = keys !== false ? Object.fromEntries(keys.map((key, i2) => [key, matches[i2]])) : result.groups;
+      let obj = { ...matches };
+      groups && Object.assign(obj, groups);
+      return obj;
+    })(),
+    // the third value if only present when parser is in "loose" mode,
+    // so that we can extract the base path for nested routes
+    ...loose ? [$base] : []
+  ] : [false, null];
+};
+const Router$1 = ({ children, ...props }) => {
+  const parent_ = useRouter();
+  const parent = props.hook ? defaultRouter : parent_;
+  let value = parent;
+  const [path, search] = props.ssrPath?.split("?") ?? [];
+  if (search) props.ssrSearch = search, props.ssrPath = path;
+  props.hrefs = props.hrefs ?? props.hook?.hrefs;
+  let ref = reactExports.useRef({}), prev = ref.current, next = prev;
+  for (let k in parent) {
+    const option = k === "base" ? (
+      /* base is special case, it is appended to the parent's base */
+      parent[k] + (props[k] || "")
+    ) : props[k] || parent[k];
+    if (prev === next && option !== next[k]) {
+      ref.current = next = { ...next };
+    }
+    next[k] = option;
+    if (option !== parent[k] || option !== value[k]) value = next;
+  }
+  return reactExports.createElement(RouterCtx.Provider, { value, children });
+};
+const h_route = ({ children, component }, params) => {
+  if (component) return reactExports.createElement(component, { params });
+  return typeof children === "function" ? children(params) : children;
+};
+const useCachedParams = (value) => {
+  let prev = reactExports.useRef(Params0);
+  const curr = prev.current;
+  return prev.current = // Update cache if number of params changed or any value changed
+  Object.keys(value).length !== Object.keys(curr).length || Object.entries(value).some(([k, v]) => v !== curr[k]) ? value : curr;
+};
+const Route = ({ path, nest, match: match2, ...renderProps }) => {
+  const router = useRouter();
+  const [location2] = useLocationFromRouter(router);
+  const [matches, routeParams, base] = (
+    // `match` is a special prop to give up control to the parent,
+    // it is used by the `Switch` to avoid double matching
+    match2 ?? matchRoute(router.parser, path, location2, nest)
+  );
+  const params = useCachedParams({ ...useParams(), ...routeParams });
+  if (!matches) return null;
+  const children = base ? reactExports.createElement(Router$1, { base }, h_route(renderProps, params)) : h_route(renderProps, params);
+  return reactExports.createElement(ParamsCtx.Provider, { value: params, children });
+};
+const Link = reactExports.forwardRef((props, ref) => {
+  const router = useRouter();
+  const [currentPath, navigate2] = useLocationFromRouter(router);
+  const {
+    to = "",
+    href: targetPath = to,
+    onClick: _onClick,
+    asChild,
+    children,
+    className: cls,
+    /* eslint-disable no-unused-vars */
+    replace,
+    state,
+    /* eslint-enable no-unused-vars */
+    ...restProps
+  } = props;
+  const onClick = useEvent((event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.button !== 0)
+      return;
+    _onClick?.(event);
+    if (!event.defaultPrevented) {
+      event.preventDefault();
+      navigate2(targetPath, props);
+    }
+  });
+  const href = router.hrefs(
+    targetPath[0] === "~" ? targetPath.slice(1) : router.base + targetPath,
+    router
+    // pass router as a second argument for convinience
+  );
+  return asChild && reactExports.isValidElement(children) ? reactExports.cloneElement(children, { onClick, href }) : reactExports.createElement("a", {
+    ...restProps,
+    onClick,
+    href,
+    // `className` can be a function to apply the class if this link is active
+    className: cls?.call ? cls(currentPath === targetPath) : cls,
+    children,
+    ref
+  });
+});
+const flattenChildren = (children) => Array.isArray(children) ? children.flatMap(
+  (c2) => flattenChildren(c2 && c2.type === reactExports.Fragment ? c2.props.children : c2)
+) : [children];
+const Switch$2 = ({ children, location: location2 }) => {
+  const router = useRouter();
+  const [originalLocation] = useLocationFromRouter(router);
+  for (const element of flattenChildren(children)) {
+    let match2 = 0;
+    if (reactExports.isValidElement(element) && // we don't require an element to be of type Route,
+    // but we do require it to contain a truthy `path` prop.
+    // this allows to use different components that wrap Route
+    // inside of a switch, for example <AnimatedRoute />.
+    (match2 = matchRoute(
+      router.parser,
+      element.props.path,
+      location2 || originalLocation,
+      element.props.nest
+    ))[0])
+      return reactExports.cloneElement(element, { match: match2 });
+  }
+  return null;
+};
+const Redirect = (props) => {
+  const { to, href = to } = props;
+  const router = useRouter();
+  const [, navigate2] = useLocationFromRouter(router);
+  const redirect = useEvent(() => navigate2(to || href, props));
+  const { ssrContext } = router;
+  useIsomorphicLayoutEffect$2(() => {
+    redirect();
+  }, []);
+  if (ssrContext) {
+    ssrContext.redirectTo = to;
+  }
+  return null;
+};
+async function throwIfResNotOk(res) {
+  if (!res.ok) {
+    if (res.status === 401 && res.url.includes("/api/auth/status")) {
+      return;
+    }
+    let errorMessage;
+    try {
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await res.json();
+        errorMessage = errorData.message || JSON.stringify(errorData);
+      } else {
+        errorMessage = await res.text();
+      }
+    } catch (e) {
+      errorMessage = res.statusText || `Error ${res.status}`;
+    }
+    throw new Error(`${res.status}: ${errorMessage}`);
+  }
+}
+async function apiRequest(method, url, data) {
+  let sanitizedData = data;
+  if (data && typeof data === "object") {
+    sanitizedData = {};
+    const isDateLike = (value) => {
+      return value && typeof value === "object" && !(value instanceof Date) && (value.hasOwnProperty("_isAMomentObject") || value.hasOwnProperty("_isValid"));
+    };
+    Object.entries(data).forEach(([key, value]) => {
+      if (isDateLike(value)) {
+        sanitizedData[key] = String(value);
+      } else if (Array.isArray(value)) {
+        sanitizedData[key] = value;
+      } else if (typeof value === "number") {
+        sanitizedData[key] = value;
+      } else if (value && typeof value === "object") {
+        sanitizedData[key] = value;
+      } else {
+        sanitizedData[key] = value;
+      }
+    });
+  }
+  try {
+    const urlWithCacheBusting = method.toUpperCase() === "GET" ? `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}` : url;
+    const res = await fetch(urlWithCacheBusting, {
+      method,
+      headers: sanitizedData ? { "Content-Type": "application/json" } : {},
+      body: sanitizedData ? JSON.stringify(sanitizedData) : void 0,
+      credentials: "include"
+    });
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    if (!(url === "/api/auth/status" && error instanceof Error && error.message.startsWith("401:"))) {
+      const isAdmin = window.location.pathname.startsWith("/admin");
+      if (isAdmin) {
+        console.error(`API request error for ${method} ${url}:`, error);
+      } else if (url !== "/api/auth/status") {
+        console.warn(`API request warning for ${method} ${url}:`, error);
+      } else ;
+    }
+    throw error;
+  }
+}
+const getQueryFn = ({ on401: unauthorizedBehavior }) => async ({ queryKey }) => {
+  try {
+    let url;
+    if (typeof queryKey[0] === "string" && queryKey[0].startsWith("/")) {
+      url = queryKey[0];
+    } else if (queryKey.length > 1 && typeof queryKey[1] === "string" && queryKey[1].startsWith("/")) {
+      url = queryKey[1];
+    } else {
+      throw new Error(`Invalid queryKey: ${JSON.stringify(queryKey)}`);
+    }
+    const urlWithCacheBusting = `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}`;
+    const res = await fetch(urlWithCacheBusting, {
+      credentials: "include"
+    });
+    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      return null;
+    }
+    await throwIfResNotOk(res);
+    return await res.json();
+  } catch (error) {
+    let url;
+    if (typeof queryKey[0] === "string" && queryKey[0].startsWith("/")) {
+      url = queryKey[0];
+    } else if (queryKey.length > 1 && typeof queryKey[1] === "string" && queryKey[1].startsWith("/")) {
+      url = queryKey[1];
+    } else {
+      url = String(queryKey[0]);
+    }
+    const isAdmin = window.location.pathname.startsWith("/admin");
+    const isAuthError = error instanceof Error && error.message.startsWith("401:");
+    if (!isAuthError || isAdmin && url !== "/api/auth/status") {
+      if (isAdmin) {
+        console.error(`Query error for ${url}:`, error);
+      }
+    }
+    throw error;
+  }
+};
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: getQueryFn({ on401: "throw" }),
+      refetchInterval: false,
+      refetchOnWindowFocus: false,
+      staleTime: 3e4,
+      // 30 seconds instead of Infinity
+      retry: false
+    },
+    mutations: {
+      retry: false
+    }
+  }
+});
+const AuthContext = reactExports.createContext(null);
+function AuthProvider({ children }) {
+  const { toast: toast2 } = useToast();
+  const [token, setToken] = reactExports.useState(null);
+  const [location2] = useLocation();
+  const isPublicRoute = ["/", "/properties", "/properties/:slug", "/auth"].some(
+    (route) => location2.startsWith(route.replace(":slug", ""))
+  );
+  const shouldCheckAuth = location2.startsWith("/admin") || !isPublicRoute;
+  const {
+    data: user,
+    error,
+    isLoading
+  } = useQuery({
+    queryKey: ["/api/auth/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
+    enabled: shouldCheckAuth
+    // Always check for admin routes
+  });
+  reactExports.useEffect(() => {
+    if (user) {
+      const timestamp2 = Date.now().toString(36);
+      const randomPart = Math.random().toString(36).substring(2);
+      const userPart = user.id.toString(36);
+      const newToken = `auth_${userPart}_${timestamp2}_${randomPart}`;
+      setToken(newToken);
+    } else {
+      setToken(null);
+    }
+  }, [user]);
+  const loginMutation = useMutation({
+    mutationFn: async (credentials) => {
+      const res = await apiRequest("POST", "/api/auth/login", credentials);
+      return await res.json();
+    },
+    onSuccess: (user2) => {
+      queryClient.setQueryData(["/api/auth/status"], user2);
+      setTimeout(() => {
+        queryClient.invalidateQueries();
+      }, 100);
+      toast2({
+        title: "Login successful",
+        description: `Welcome back, ${user2?.username || user2?.email || "User"}!`
+      });
+    },
+    onError: (error2) => {
+      toast2({
+        title: "Login failed",
+        description: error2.message,
+        variant: "destructive"
+      });
+    }
+  });
+  const registerMutation = useMutation({
+    mutationFn: async (credentials) => {
+      const res = await apiRequest("POST", "/api/register", credentials);
+      return await res.json();
+    },
+    onSuccess: (user2) => {
+      queryClient.setQueryData(["/api/auth/status"], user2);
+      toast2({
+        title: "Registration successful",
+        description: `Welcome, ${user2.username}!`
+      });
+    },
+    onError: (error2) => {
+      toast2({
+        title: "Registration failed",
+        description: error2.message,
+        variant: "destructive"
+      });
+    }
+  });
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout");
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(["/api/auth/status"], null);
+      setToken(null);
+      toast2({
+        title: "Logged out",
+        description: "You have been successfully logged out."
+      });
+    },
+    onError: (error2) => {
+      toast2({
+        title: "Logout failed",
+        description: error2.message,
+        variant: "destructive"
+      });
+    }
+  });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    AuthContext.Provider,
+    {
+      value: {
+        user: user ?? null,
+        token,
+        isLoading,
+        error,
+        loginMutation,
+        logoutMutation,
+        registerMutation
+      },
+      children
+    }
+  );
+}
+function useAuth() {
+  const context = reactExports.useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
 function ProtectedRoute({
   path,
@@ -48769,9 +48535,9 @@ function Router() {
   ] });
 }
 function App() {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuthProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(WebSocketProvider, { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(AuthProvider, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Router, {}),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Toaster, {})
-  ] }) }) });
+  ] }) });
 }
 clientExports.createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(App, {}));

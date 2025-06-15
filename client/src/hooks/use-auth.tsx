@@ -53,12 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Generate a token when user is logged in
   useEffect(() => {
     if (user) {
-      // Generate a more robust token for WebSocket authentication
+      // Generate a simple token for general authentication purposes
       // In a real app, this should come from your backend as a JWT
       const timestamp = Date.now().toString(36);
       const randomPart = Math.random().toString(36).substring(2);
       const userPart = user.id.toString(36);
-      const newToken = `ws_${userPart}_${timestamp}_${randomPart}`;
+      const newToken = `auth_${userPart}_${timestamp}_${randomPart}`;
       setToken(newToken);
     } else {
       setToken(null);

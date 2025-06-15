@@ -104,7 +104,6 @@
     "@types/passport-local": "^1.0.38",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
-    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "bcrypt": "^6.0.0",
@@ -159,7 +158,6 @@
     "web-vitals": "^5.0.2",
     "winston": "^3.17.0",
     "wouter": "^3.0.0",
-    "ws": "^8.18.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {

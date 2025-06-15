@@ -1,13 +1,12 @@
 import { v2 as cloudinaryV2 } from 'cloudinary';
 import { eq } from "drizzle-orm";
-import type { Express, NextFunction, Request, Response } from "express";
-import { createServer, type Server } from "http";
-import multer from 'multer';
-import { WebSocketServer } from 'ws';
+import { Express, NextFunction, Request, Response } from 'express';
+import { createServer, Server } from 'http';
 import { insertInquirySchema, insertNearbyFacilitySchema, insertPropertySchema, propertyMedia } from "../shared/schema";
 import authRouter from "./auth";
 import { db } from "./db";
 import { sendInquiryNotification, sendUserConfirmationEmail } from "./email";
+import { upload } from './multer-config';
 import { storage } from "./storage";
 
 // Type assertion to bypass Express type conflicts
@@ -37,13 +36,6 @@ interface CloudinaryFile extends Express.Multer.File {
   cloudinaryId?: string;
   cloudinaryUrl?: string;
 }
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB - increased for video uploads
-  }
-});
 
 // Cloudinary config check middleware
 const checkCloudinaryConfig = (req: Request, res: Response, next: NextFunction): void => {
@@ -75,72 +67,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cast app to bypass all Express type conflicts for route definitions
   const appTyped = app as any;
   
-  // WebSocket server setup
-  const wsServer = new WebSocketServer({ 
-    server: httpServer,
-    path: '/ws'
-  });
-
-  wsServer.on('connection', (ws, req) => {
-    const connectionId = Math.random().toString(36).substring(2, 8);
-    console.log(`🔌 New WebSocket connection [${connectionId}]`);
-    console.log('🔍 Debug - req.url:', req.url);
-    console.log('🔍 Debug - req.headers.host:', req.headers.host);
-
-    // Parse token from query string  
-    const url = new URL(req.url || '', `http://${req.headers.host}`);
-    console.log('🔍 Debug - parsed URL:', url.toString());
-    console.log('🔍 Debug - searchParams:', url.searchParams.toString());
-    const token = url.searchParams.get('token');
-    console.log('🔍 Debug - extracted token:', token ? 'TOKEN_FOUND' : 'NO_TOKEN');
-
-    // For development, we'll accept any token as long as one is provided
-    // In production, this should validate against real JWT tokens
-    if (!token || token.length < 10) {
-      console.log('❌ WebSocket connection rejected: Invalid or missing token');
-      ws.close(1008, 'Authentication required');
-      return;
-    }
-
-    console.log('✅ WebSocket token validation passed');
-
-    ws.on('message', (message) => {
-      try {
-        // Handle incoming messages
-        console.log('📥 Received WebSocket message:', message.toString());
-        
-        // Echo back the message for now
-        ws.send(JSON.stringify({ 
-          type: 'echo',
-          data: JSON.parse(message.toString())
-        }));
-      } catch (error) {
-        console.error('❌ Error handling WebSocket message:', error);
-        ws.send(JSON.stringify({ 
-          type: 'error',
-          message: 'Failed to process message'
-        }));
-      }
-    });
-
-    ws.on('close', (code, reason) => {
-      console.log(`🔌 WebSocket connection closed [${connectionId}] - Code: ${code}, Reason: ${reason.toString()}`);
-    });
-
-    ws.on('error', (error) => {
-      console.error(`❌ WebSocket error [${connectionId}]:`, error);
-    });
-
-    // Send initial connection success message
-    ws.send(JSON.stringify({ 
-      type: 'connected',
-      message: 'WebSocket connection established',
-      connectionId: connectionId
-    }));
-    
-    console.log(`✅ WebSocket connection fully established [${connectionId}]`);
-  });
-
   // Setup authentication routes
   app.use('/api/auth', authRouter);
 
