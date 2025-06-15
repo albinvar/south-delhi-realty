@@ -7,18 +7,14 @@ export default defineConfig({
   build: {
     outDir: "../dist/public",
     emptyOutDir: true,
-    chunkSizeWarningLimit: 1000,
+    minify: false,
+    sourcemap: false,
+    target: 'es2020',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
-          utils: ['clsx', 'tailwind-merge']
-        }
+        manualChunks: undefined
       }
-    },
-    minify: 'esbuild',
-    target: 'es2020'
+    }
   },
   resolve: {
     alias: {
