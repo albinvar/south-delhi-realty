@@ -10,7 +10,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Create storage engine for Multer
+// Create storage engine for Multer with type assertions to handle conflicts
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -22,8 +22,8 @@ const storage = new CloudinaryStorage({
     ],
     use_filename: true,
     unique_filename: true,
-  },
-}) as unknown as multer.StorageEngine;
+  } as any,
+}) as any as multer.StorageEngine;
 
 // Multer middleware configuration
 const upload: Multer = multer({ 

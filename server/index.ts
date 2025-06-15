@@ -4,7 +4,7 @@ import 'dotenv/config';
 // Production-ready imports
 import compression from 'compression';
 import cors from 'cors';
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express } from "express";
 import session from 'express-session';
 import helmet from 'helmet';
 import { createServer } from 'http';
@@ -83,13 +83,13 @@ async function startServer() {
     app.use(compression({
       level: 6,
       threshold: 1024,
-      filter: (req: Request, res: Response) => {
+      filter: (req: any, res: any) => {
         if (req.headers['x-no-compression']) {
           return false;
         }
         return compression.filter(req, res);
       }
-    }));
+    }) as any);
 
     // Rate limiting removed - no maximum login attempts
 
@@ -156,7 +156,7 @@ async function startServer() {
     }
 
     // Configure session middleware
-    const sessionConfig = {
+    const sessionConfig: session.SessionOptions = {
       secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
       resave: false,
       saveUninitialized: false,
@@ -165,7 +165,7 @@ async function startServer() {
       proxy: true, // Trust the reverse proxy
       cookie: {
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax' | 'strict' | boolean,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         httpOnly: true,
       }
@@ -173,38 +173,15 @@ async function startServer() {
 
     // Adjust cookie settings based on environment
     if (process.env.NODE_ENV === 'production' && process.env.SSL_ENABLED === 'true') {
-      sessionConfig.cookie.secure = true;
-      sessionConfig.cookie.sameSite = 'lax' as const; // Keep as 'lax' for OAuth
+      sessionConfig.cookie!.secure = true;
+      sessionConfig.cookie!.sameSite = 'lax' as const; // Keep as 'lax' for OAuth
     }
 
-    app.use(session(sessionConfig));
+    app.use(session(sessionConfig) as any);
 
     // Initialize passport and session
-    app.use(passport.initialize());
-    app.use(passport.session());
-
-    // Health check endpoint
-    app.get('/health', (req: Request, res: Response) => {
-      const taxService = (global as any).taxService;
-      const taxServiceStatus = process.env.NODE_ENV === 'production' 
-        ? (taxService && !taxService.killed ? 'running' : 'stopped')
-        : 'not_applicable_in_dev';
-
-      res.status(200).json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        environment: process.env.NODE_ENV || 'development',
-        version: process.env.npm_package_version || '1.0.0',
-        services: {
-          taxEmailService: {
-            status: taxServiceStatus,
-            port: process.env.TAX_EMAIL_SERVICE_PORT || '7824'
-          }
-        }
-      });
-    });
+    app.use(passport.initialize() as any);
+    app.use(passport.session() as any);
 
     // Readiness check (for Kubernetes/Docker)
     app.get('/ready', async (req: any, res: any) => {
@@ -326,14 +303,7 @@ async function startServer() {
     // Graceful shutdown handling
     const gracefulShutdown = (signal: string) => {
       logger.info(`Received ${signal}. Starting graceful shutdown...`);
-      
-      // Close tax service if running
-      const taxService = (global as any).taxService;
-      if (taxService && !taxService.killed) {
-        logger.info('Stopping Tax Email Service...');
-        taxService.kill('SIGTERM');
-      }
-      
+            
       server.close(() => {
         logger.info('HTTP server closed.');
         logger.info('Application shutdown complete.');
@@ -343,10 +313,6 @@ async function startServer() {
       // Force close server after 30s
       setTimeout(() => {
         logger.error('Could not close connections in time, forcefully shutting down');
-        // Force kill tax service if still running
-        if (taxService && !taxService.killed) {
-          taxService.kill('SIGKILL');
-        }
         process.exit(1);
       }, 30000);
     };
@@ -376,57 +342,6 @@ async function startServer() {
         // Don't exit, just log the warning
       }
 
-      // Initialize Tax Email Service in production
-      try {
-        const { spawn } = await import('child_process');
-        const path = await import('path');
-        
-        const taxServicePath = path.join(process.cwd(), 'services', 'tax-email-service.js');
-        
-        const taxService = spawn('node', [taxServicePath], {
-          stdio: ['inherit', 'pipe', 'pipe'],
-          cwd: process.cwd(),
-          detached: false
-        });
-
-        // Log tax service stdout
-        taxService.stdout?.on('data', (data) => {
-          const message = data.toString().trim();
-          if (message) {
-            logger.info(`[Tax Service] ${message}`);
-          }
-        });
-
-        // Log tax service stderr
-        taxService.stderr?.on('data', (data) => {
-          const message = data.toString().trim();
-          if (message) {
-            logger.error(`[Tax Service Error] ${message}`);
-          }
-        });
-
-        taxService.on('error', (error) => {
-          logger.error('Failed to start Tax Email Service:', error);
-        });
-
-        taxService.on('close', (code) => {
-          if (code !== 0) {
-            logger.warn(`Tax Email Service exited with code ${code}`);
-          } else {
-            logger.info('Tax Email Service stopped gracefully');
-          }
-        });
-
-        // Store reference for cleanup
-        (global as any).taxService = taxService;
-
-        logger.info('🚀 Tax Email Service started automatically in production mode');
-        logger.info(`📧 Tax Service running on port ${process.env.TAX_EMAIL_SERVICE_PORT || '7824'}`);
-        
-      } catch (error) {
-        logger.warn('Tax Email Service initialization failed:', error instanceof Error ? error.message : String(error));
-        // Don't exit, just log the warning
-      }
     }
 
     const port = parseInt(process.env.PORT || '5000', 10);

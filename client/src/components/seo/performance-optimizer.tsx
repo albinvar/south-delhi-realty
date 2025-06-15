@@ -88,28 +88,49 @@ export function useLazyLoading() {
 // Performance monitoring (without console logging)
 export function usePerformanceMonitoring() {
   useEffect(() => {
-    // Monitor Core Web Vitals
-    if ('web-vital' in window) {
-      import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-        // Monitor metrics without logging to console
-        // In production, these would be sent to analytics service
-        getCLS((metric) => {
+    // Monitor Core Web Vitals with proper imports
+    import('web-vitals').then((webVitals) => {
+      // Monitor metrics without logging to console
+      // In production, these would be sent to analytics service
+      
+      // Use optional chaining since some metrics might not be available in all versions
+      if (webVitals.onCLS) {
+        webVitals.onCLS((metric: any) => {
           // Send to analytics service if needed
         });
-        getFID((metric) => {
+      }
+      
+      // onFID is deprecated in favor of onINP in newer versions
+      if (webVitals.onINP) {
+        webVitals.onINP((metric: any) => {
           // Send to analytics service if needed
         });
-        getFCP((metric) => {
+      } else if ((webVitals as any).onFID) {
+        (webVitals as any).onFID((metric: any) => {
           // Send to analytics service if needed
         });
-        getLCP((metric) => {
+      }
+      
+      if (webVitals.onFCP) {
+        webVitals.onFCP((metric: any) => {
           // Send to analytics service if needed
         });
-        getTTFB((metric) => {
+      }
+      
+      if (webVitals.onLCP) {
+        webVitals.onLCP((metric: any) => {
           // Send to analytics service if needed
         });
-      });
-    }
+      }
+      
+      if (webVitals.onTTFB) {
+        webVitals.onTTFB((metric: any) => {
+          // Send to analytics service if needed
+        });
+      }
+    }).catch(() => {
+      // Web vitals not available, skip monitoring
+    });
 
     // Monitor page load performance
     window.addEventListener('load', () => {
@@ -123,7 +144,7 @@ export function usePerformanceMonitoring() {
           response: navigation.responseEnd - navigation.responseStart,
           dom: navigation.domContentLoadedEventEnd - navigation.responseEnd,
           load: navigation.loadEventEnd - navigation.loadEventStart,
-          total: navigation.loadEventEnd - navigation.navigationStart
+          total: navigation.loadEventEnd - navigation.fetchStart
         };
 
         // Store metrics for analytics (instead of console logging)

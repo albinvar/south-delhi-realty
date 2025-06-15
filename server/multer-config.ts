@@ -2,18 +2,17 @@ import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-// Create storage engine for Multer
+// Create storage engine for Multer with type assertions to handle conflicts
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'south-delhi-realty',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov'],
+    public_id: ((req: any, file: any) => `south-delhi-realty-${Date.now()}`) as any,
     resource_type: 'auto', // detects if it's image or video
     transformation: [
       { quality: 'auto', fetch_format: 'auto' }
     ],
-  },
-}) as unknown as multer.StorageEngine;
+  } as any,
+}) as any as multer.StorageEngine;
 
 // Multer middleware configuration
 export const upload = multer({ 

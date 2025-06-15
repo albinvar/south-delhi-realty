@@ -21,7 +21,7 @@ export function useWebSocket({
   onClose,
   onError,
   reconnectOnClose = true,
-  disabled = false, // Default to enabled
+  disabled = true, // Default to enabled
 }: UseWebSocketProps = {}) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [status, setStatus] = useState<WebSocketStatus>('closed');

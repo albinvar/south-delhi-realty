@@ -5,20 +5,20 @@ import SEOHead, { generatePropertyStructuredData } from "@/components/seo/seo-he
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -31,13 +31,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { PropertyWithRelations, insertInquirySchema } from "@shared/schema";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-    ArrowLeftRight,
-    Bath,
-    Bed,
-    CalendarIcon,
-    Heart,
-    MapPin,
-    Share2
+  ArrowLeftRight,
+  Bath,
+  Bed,
+  CalendarIcon,
+  Heart,
+  MapPin,
+  Share2
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -199,14 +199,14 @@ export default function PropertyDetailPage() {
     if (!property) return {};
 
     const propertyTitle = `${property.title} in South Delhi`;
-    const propertyDescription = `${property.description?.substring(0, 160)}... ${formatPrice()} | ${property.bedrooms} BHK | ${getAreaWithUnit()} | ${property.location || 'South Delhi'}`;
+    const propertyDescription = `${property.description?.substring(0, 160)}... ${formatPrice()} | ${property.bedrooms} BHK | ${getAreaWithUnit()} | ${property.contactDetails.split(',')[0] || 'South Delhi'}`;
     const propertyImage = property.media?.[0]?.cloudinaryUrl || '/sdrlogo.png';
     const propertyUrl = `https://southdelhirealty.com/property/${property.slug}`;
     
     const keywords = [
-      `${property.bedrooms} bhk ${property.type} south delhi`,
-      `${property.location || ''} properties`,
-      `${property.status} ${property.type}`,
+      `${property.bedrooms} bhk ${property.propertyType} south delhi`,
+      `${property.contactDetails.split(',')[0] || ''} properties`,
+      `${property.status} ${property.propertyType}`,
       property.status === 'sale' ? 'buy property south delhi' : 'rent property south delhi',
       'south delhi real estate',
       'premium properties south delhi'

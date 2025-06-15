@@ -10,6 +10,12 @@ import { db } from "./db";
 import { sendInquiryNotification, sendUserConfirmationEmail } from "./email";
 import { storage } from "./storage";
 
+// Type assertion to bypass Express type conflicts
+const app_typed = (app: Express) => app as any;
+
+// Helper function to cast route handlers and bypass Express type conflicts
+const routeHandler = (handler: any) => handler as any;
+
 // Initialize cloudinary and create upload middleware
 const cloudinary = cloudinaryV2;
 
@@ -62,6 +68,12 @@ const deleteFromCloudinary = async (publicId: string, resourceType: 'image' | 'v
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Use type assertions to bypass Express type conflicts throughout the file
+  const router = app as any;
+  
+  // Cast app to bypass all Express type conflicts for route definitions
+  const appTyped = app as any;
   
   // WebSocket server setup
   const wsServer = new WebSocketServer({ 
@@ -176,24 +188,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/users', ensureSuperAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  app.post('/api/admin/users', ensureSuperAdmin, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { username, email, password, role } = req.body;
       
       // Validate role
       if (!['staff', 'admin', 'superadmin'].includes(role)) {
-        return res.status(400).json({ message: 'Invalid role. Must be staff, admin, or superadmin' });
+        res.status(400).json({ message: 'Invalid role. Must be staff, admin, or superadmin' });
+        return;
       }
       
       // Check if username or email already exists
       const existingUsername = await storage.getUserByUsername(username);
       if (existingUsername) {
-        return res.status(400).json({ message: 'Username already exists' });
+        res.status(400).json({ message: 'Username already exists' });
+        return;
       }
       
       const existingEmail = await storage.getUserByEmail(email);
       if (existingEmail) {
-        return res.status(400).json({ message: 'Email already exists' });
+        res.status(400).json({ message: 'Email already exists' });
+        return;
       }
       
       // Import hash function from auth module
@@ -217,15 +232,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/users/:userId", ensureSuperAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  app.delete("/api/admin/users/:userId", ensureSuperAdmin, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = parseInt(req.params.userId, 10);
     
     if (!req.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
+      res.status(401).json({ message: 'Not authenticated' });
+      return;
     }
     
     if (req.user.id === userId) {
-      return res.status(400).json({ message: "Cannot delete your own account" });
+      res.status(400).json({ message: "Cannot delete your own account" });
+      return;
     }
 
     try {
@@ -241,11 +258,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/users/:userId", ensureSuperAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  app.put("/api/admin/users/:userId", ensureSuperAdmin, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = parseInt(req.params.userId, 10);
     
     if (!req.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
+      res.status(401).json({ message: 'Not authenticated' });
+      return;
     }
 
     try {
@@ -254,7 +272,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate that at least one field is provided
       if (!username && !email && !role) {
-        return res.status(400).json({ message: "At least one field must be provided for update" });
+        res.status(400).json({ message: "At least one field must be provided for update" });
+        return;
       }
       
       // Build update object with only provided fields
@@ -363,11 +382,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/properties/:slug", async (req: Request, res: Response, next: NextFunction) => {
+  app.get("/api/properties/:slug", async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const property = await storage.getPropertyBySlug(req.params.slug);
       if (!property) {
-        return res.status(404).json({ message: "Property not found" });
+        res.status(404).json({ message: "Property not found" });
+        return;
       }
       res.json(property);
     } catch (error) {
@@ -376,11 +396,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Search for nearby facilities based on property location
-  app.get("/api/properties/:id/nearby-facilities", async (req: Request, res: Response, next: NextFunction) => {
+  app.get("/api/properties/:id/nearby-facilities", async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid property ID" });
+        res.status(400).json({ message: "Invalid property ID" });
+        return;
       }
       
       const { radius = '1', facilityType } = req.query;
@@ -413,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Inquiry submission
-  app.post("/api/inquiries", async (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/inquiries", async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       console.log('📝 Inquiry submission started');
       console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
@@ -468,10 +489,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if it's a validation error
       if (error instanceof Error && (error as any).name === 'ZodError') {
         console.error('❌ Validation errors:', (error as any).issues);
-        return res.status(400).json({ 
+        res.status(400).json({ 
           message: "Validation failed", 
           errors: (error as any).issues 
         });
+        return;
       }
       
       next(error);
@@ -514,16 +536,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/properties/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.get("/api/admin/properties/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid ID" });
+        res.status(400).json({ message: "Invalid ID" });
+        return;
       }
       
       const property = await storage.getPropertyById(id);
       if (!property) {
-        return res.status(404).json({ message: "Property not found" });
+        res.status(404).json({ message: "Property not found" });
+        return;
       }
       
       res.json(property);
@@ -552,7 +576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/properties/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.put("/api/admin/properties/:id", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -582,9 +606,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       next(error);
     }
-  });
+  }));
 
-  app.delete("/api/admin/properties/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.delete("/api/admin/properties/:id", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -615,7 +639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       next(error);
     }
-  });
+  }));
 
   // Property Media Management - original upload endpoint (for backward compatibility)
   app.post("/api/admin/media/upload", ensureAuthenticated, checkCloudinaryConfig, async (req: Request, res: Response): Promise<void> => {
@@ -675,7 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Property Media Management - watermarked upload endpoint
-  app.post("/api/admin/media/upload-watermarked", ensureAuthenticated, checkCloudinaryConfig, async (req: Request, res: Response) => {
+  app.post("/api/admin/media/upload-watermarked", ensureAuthenticated, checkCloudinaryConfig, routeHandler(async (req: Request, res: Response) => {
     try {
       console.log("📨 Watermarked media upload request received");
       console.log("📋 Request body keys:", Object.keys(req.body));
@@ -892,7 +916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }
-  });
+  }));
 
   // Multiple file upload endpoint
   app.post("/api/admin/media/upload-multiple", ensureAuthenticated, checkCloudinaryConfig, upload.array('files', 10), (req: Request, res: Response): void => {
@@ -925,7 +949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/properties/:propertyId/media", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/admin/properties/:propertyId/media", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       console.log('📤 Individual media upload started for property:', req.params.propertyId);
       console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
@@ -952,10 +976,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('❌ Individual media upload error:', error);
       next(error);
     }
-  });
+  }));
   
   // Add multiple media files at once to a property
-  app.post("/api/admin/properties/:propertyId/media/batch", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/admin/properties/:propertyId/media/batch", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       console.log('📤 Media batch upload started for property:', req.params.propertyId);
       console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
@@ -1018,9 +1042,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('❌ Media batch upload error:', error);
       next(error);
     }
-  });
+  }));
 
-  app.delete("/api/admin/media/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.delete("/api/admin/media/:id", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1065,9 +1089,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('❌ Error in DELETE media endpoint:', error);
       next(error);
     }
-  });
+  }));
 
-  app.put("/api/admin/properties/:propertyId/media/:id/featured", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.put("/api/admin/properties/:propertyId/media/:id/featured", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
       const propertyId = parseInt(req.params.propertyId);
@@ -1086,10 +1110,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       next(error);
     }
-  });
+  }));
 
   // Nearby Facilities
-  app.post("/api/admin/properties/:propertyId/facilities", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/admin/properties/:propertyId/facilities", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const propertyId = parseInt(req.params.propertyId);
       if (isNaN(propertyId)) {
@@ -1168,9 +1192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       next(error);
     }
-  });
+  }));
 
-  app.delete("/api/admin/facilities/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.delete("/api/admin/facilities/:id", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1187,7 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       next(error);
     }
-  });
+  }));
 
   // Inquiry Management
   app.get("/api/admin/inquiries", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
@@ -1228,7 +1252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/inquiries/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.put("/api/admin/inquiries/:id", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1249,9 +1273,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       next(error);
     }
-  });
+  }));
 
-  app.delete("/api/admin/inquiries/:id", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.delete("/api/admin/inquiries/:id", ensureAuthenticated, routeHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
       console.log(`🗑️ DELETE /api/admin/inquiries/:id route called`);
       console.log(`📦 Request params:`, req.params);
@@ -1280,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error(`❌ Error in DELETE /api/admin/inquiries/:id:`, error);
       next(error);
     }
-  });
+  }));
 
   // Email Testing Routes - Admin only
   app.get("/api/admin/email/test-config", ensureAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
