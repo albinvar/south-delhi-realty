@@ -80,6 +80,12 @@ SSL_ENABLED=true
 - **Removed**: Async configuration and dynamic imports
 - **Added**: Production-specific build optimizations
 
+### **Error: "Cannot find package '@vitejs/plugin-react'"**
+**Status**: ✅ **FIXED**
+- **Problem**: Build dependencies in devDependencies get pruned before build
+- **Solution**: Moved essential build dependencies to main dependencies
+- **Added**: .npmrc file to control npm behavior during deployment
+
 ## 📋 Deployment Checklist
 
 ### Before Deployment:
