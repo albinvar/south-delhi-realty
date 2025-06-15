@@ -73,7 +73,7 @@ console.log(`Index file: ${indexPath}`);
 // Set up environment with proper memory limits and garbage collection
 const buildEnv = {
   ...process.env,
-  NODE_OPTIONS: '--max-old-space-size=8192 --max-semi-space-size=128 --expose-gc --optimize-for-size'
+  NODE_OPTIONS: '--max-old-space-size=8192 --max-semi-space-size=128 --expose-gc'
 };
 
 console.log(`Using NODE_OPTIONS: ${buildEnv.NODE_OPTIONS}`);
