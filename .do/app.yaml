@@ -8,7 +8,7 @@ services:
   run_command: npm start
   environment_slug: node-js
   instance_count: 1
-  instance_size_slug: basic-xxs
+  instance_size_slug: basic-xs
   build_command: npm install && npm run build
   routes:
   - path: /
@@ -20,7 +20,7 @@ services:
   - key: NPM_CONFIG_PRODUCTION
     value: "false"
   - key: NODE_OPTIONS
-    value: "--max-old-space-size=4096"
+    value: "--max-old-space-size=8192 --max-semi-space-size=128"
   - key: DB_HOST
     value: ${DB_HOST}
   - key: DB_USER
