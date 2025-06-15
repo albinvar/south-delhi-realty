@@ -117,7 +117,7 @@ async function startServer() {
         }
         const nodeEnv = (process.env.NODE_ENV || 'development').trim();
         const allowedOrigins = nodeEnv === 'production'
-            ? (process.env.ALLOWED_ORIGINS || 'http://localhost:7822,http://127.0.0.1:7822,http://localhost:5000,http://127.0.0.1:5000,https://southdelhirealty.com').split(',').filter(Boolean).map(origin => origin.trim())
+            ? (process.env.ALLOWED_ORIGINS || 'http://localhost:7822,http://127.0.0.1:7822,http://localhost:5000,http://127.0.0.1:5000,https://southdelhirealty.com,https://south-delhi-realty-4g75c.ondigitalocean.app').split(',').filter(Boolean).map(origin => origin.trim())
             : [
                 'http://localhost:3000',
                 'http://localhost:5000',
@@ -125,9 +125,15 @@ async function startServer() {
                 'http://127.0.0.1:3000',
                 'http://127.0.0.1:5000',
                 'http://127.0.0.1:7822',
-                'https://southdelhirealty.com'
+                'https://southdelhirealty.com',
+                'https://south-delhi-realty-4g75c.ondigitalocean.app'
             ];
         console.log(`CORS allowed origins: ${JSON.stringify(allowedOrigins)}`);
+        const envCheck = (process.env.NODE_ENV || 'development').trim();
+        if (envCheck === "production") {
+            console.log("Setting up static file serving before CORS");
+            (0, vite_1.serveStatic)(app);
+        }
         const corsOptions = {
             origin: (origin, callback) => {
                 if (!origin) {
@@ -243,8 +249,7 @@ async function startServer() {
             await (0, vite_1.setupVite)(app, server);
         }
         else {
-            console.log("Using static file serving");
-            (0, vite_1.serveStatic)(app);
+            console.log("Static file serving already configured before CORS");
         }
         app.use('/api/*', (req, res) => {
             res.status(404).json({ message: 'API endpoint not found' });

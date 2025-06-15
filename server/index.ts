@@ -109,7 +109,7 @@ async function startServer() {
 
     // In production, use the allowed origins from env, otherwise be more permissive for development
     const allowedOrigins = nodeEnv === 'production' 
-      ? (process.env.ALLOWED_ORIGINS || 'http://localhost:7822,http://127.0.0.1:7822,http://localhost:5000,http://127.0.0.1:5000,https://southdelhirealty.com').split(',').filter(Boolean).map(origin => origin.trim())
+      ? (process.env.ALLOWED_ORIGINS || 'http://localhost:7822,http://127.0.0.1:7822,http://localhost:5000,http://127.0.0.1:5000,https://southdelhirealty.com,https://south-delhi-realty-4g75c.ondigitalocean.app').split(',').filter(Boolean).map(origin => origin.trim())
       : [
           'http://localhost:3000',
           'http://localhost:5000',
@@ -117,10 +117,18 @@ async function startServer() {
           'http://127.0.0.1:3000',
           'http://127.0.0.1:5000',
           'http://127.0.0.1:7822',
-          'https://southdelhirealty.com'
+          'https://southdelhirealty.com',
+          'https://south-delhi-realty-4g75c.ondigitalocean.app'
         ];
 
     console.log(`CORS allowed origins: ${JSON.stringify(allowedOrigins)}`);
+
+    // Serve static files BEFORE CORS to avoid CORS issues with assets
+    const envCheck = (process.env.NODE_ENV || 'development').trim();
+    if (envCheck === "production") {
+      console.log("Setting up static file serving before CORS");
+      serveStatic(app);
+    }
 
     const corsOptions: cors.CorsOptions = {
       origin: (origin, callback) => {
@@ -261,15 +269,14 @@ async function startServer() {
     await registerRoutes(app);
     console.log('✅ Routes registered successfully');
 
-    // Setup Vite in development or static files in production (after API routes)
+    // Setup Vite in development (static files already set up in production)
     const env = (process.env.NODE_ENV || 'development').trim();
     console.log(`Environment check: "${env}"`);
     if (env === "development") {
       console.log("Using Vite development server");
       await setupVite(app, server);
     } else {
-      console.log("Using static file serving");
-      serveStatic(app);
+      console.log("Static file serving already configured before CORS");
     }
 
     // 404 handler for API routes
