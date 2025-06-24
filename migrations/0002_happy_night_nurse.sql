@@ -1,0 +1,1 @@
+ALTER TABLE `nearby_facilities` MODIFY COLUMN `facility_type` enum('school','hospital','market','park','metro','bus-stop','bank','atm','restaurant','gym','temple','mall','gas-station','other') NOT NULL;

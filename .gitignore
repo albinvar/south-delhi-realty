@@ -120,11 +120,6 @@ server/public
 # Build configuration backups
 vite.config.ts.*
 
-# Database backups (should be stored separately)
-*.sql
-backup_*.sql
-database_backup.sql
-mysql_backup.sql
 
 # Generated icon
 generated-icon.png

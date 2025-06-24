@@ -1,0 +1,1 @@
+ALTER TABLE `properties` ADD `portion` enum('front','back','side','floor');
