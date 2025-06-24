@@ -47894,9 +47894,9 @@ function PropertyGallery({ media }) {
   const [lightboxOpen, setLightboxOpen] = reactExports.useState(false);
   const [showAllMedia, setShowAllMedia] = reactExports.useState(false);
   if (!media || media.length === 0) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg overflow-hidden bg-gray-200 h-96 flex items-center justify-center mb-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Image$1, { className: "h-16 w-16 text-gray-400 mx-auto mb-4" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500", children: "No media available" })
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg overflow-hidden bg-gray-200 h-60 sm:h-96 flex items-center justify-center mb-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Image$1, { className: "h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm sm:text-base", children: "No media available" })
     ] }) });
   }
   const images = media.filter((item) => item.mediaType === "image");
@@ -47928,17 +47928,17 @@ function PropertyGallery({ media }) {
   const displayMedia = getDisplayMedia();
   const remainingCount = allMedia.length - 9;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold", children: "Property Gallery" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg sm:text-xl font-semibold", children: "Property Gallery" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-          images.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "flex items-center gap-1", children: [
+          images.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "flex items-center gap-1 text-xs sm:text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Image$1, { className: "h-3 w-3" }),
             images.length,
             " Photo",
             images.length !== 1 ? "s" : ""
           ] }),
-          videos.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "flex items-center gap-1", children: [
+          videos.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "flex items-center gap-1 text-xs sm:text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-3 w-3" }),
             videos.length,
             " Video",
@@ -47952,17 +47952,17 @@ function PropertyGallery({ media }) {
           variant: "outline",
           size: "sm",
           onClick: () => setShowAllMedia(!showAllMedia),
+          className: "text-xs sm:text-sm",
           children: showAllMedia ? "Show Less" : `View All ${allMedia.length} Media`
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col lg:grid lg:grid-cols-5 gap-4 mb-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Dialog, { open: lightboxOpen, onOpenChange: setLightboxOpen, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTrigger, { asChild: true, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
-            className: "lg:col-span-3 rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100",
-            style: { height: "400px" },
+            className: "lg:col-span-3 rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100 h-64 sm:h-80 lg:h-[400px]",
             onClick: () => openLightbox(allMedia.findIndex((item) => item.id === featuredMedia.id)),
             children: [
               featuredMedia.mediaType === "image" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -47982,19 +47982,19 @@ function PropertyGallery({ media }) {
                     playsInline: true
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/20 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white/90 rounded-full p-3 shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { className: "h-8 w-8 text-black" }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/20 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white/90 rounded-full p-2 sm:p-3 shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { className: "h-6 w-6 sm:h-8 sm:w-8 text-black" }) }) })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-3 left-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { className: "bg-black/70 text-white", children: featuredMedia.mediaType === "image" ? "Featured" : "Video Tour" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-2 left-2 sm:top-3 sm:left-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { className: "bg-black/70 text-white text-xs sm:text-sm", children: featuredMedia.mediaType === "image" ? "Featured" : "Video Tour" }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" })
             ]
           }
         ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { className: "max-w-5xl w-full bg-black/95 border-none p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { className: "max-w-[95vw] sm:max-w-5xl w-full bg-black/95 border-none p-2 sm:p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(VisuallyHidden, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Property Media Gallery" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(DialogDescription, { children: "View and navigate through property images and videos. Use the arrow buttons to move between media items." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full", style: { height: "70vh" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full h-[60vh] sm:h-[70vh]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full h-full flex items-center justify-center bg-black/50 rounded-lg overflow-hidden", children: allMedia[currentIndex]?.mediaType === "image" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
               "img",
               {
@@ -48018,9 +48018,9 @@ function PropertyGallery({ media }) {
                 {
                   variant: "ghost",
                   size: "icon",
-                  className: "absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full",
+                  className: "absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-8 w-8 sm:h-10 sm:w-10",
                   onClick: () => navigateMedia("prev"),
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronLeft, { className: "h-6 w-6" })
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronLeft, { className: "h-4 w-4 sm:h-6 sm:w-6" })
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -48028,9 +48028,9 @@ function PropertyGallery({ media }) {
                 {
                   variant: "ghost",
                   size: "icon",
-                  className: "absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full",
+                  className: "absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-8 w-8 sm:h-10 sm:w-10",
                   onClick: () => navigateMedia("next"),
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronRight, { className: "h-6 w-6" })
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronRight, { className: "h-4 w-4 sm:h-6 sm:w-6" })
                 }
               )
             ] }),
@@ -48039,14 +48039,14 @@ function PropertyGallery({ media }) {
               {
                 variant: "ghost",
                 size: "icon",
-                className: "absolute right-4 top-4 bg-black/50 hover:bg-black/70 text-white rounded-full",
+                className: "absolute right-2 sm:right-4 top-2 sm:top-4 bg-black/50 hover:bg-black/70 text-white rounded-full h-8 w-8 sm:h-10 sm:w-10",
                 onClick: () => setLightboxOpen(false),
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-6 w-6" })
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-4 w-4 sm:h-6 sm:w-6" })
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-              allMedia[currentIndex]?.mediaType === "video" && /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-4 w-4" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 sm:px-4 sm:py-2 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+              allMedia[currentIndex]?.mediaType === "video" && /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-3 w-3 sm:h-4 sm:w-4" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs sm:text-sm", children: [
                 currentIndex + 1,
                 " / ",
                 allMedia.length
@@ -48055,12 +48055,11 @@ function PropertyGallery({ media }) {
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-2 grid grid-cols-2 gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-2 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-2", children: [
         displayMedia.slice(1, 9).map((item, index2) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
-            className: "rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100",
-            style: { height: "95px" },
+            className: "rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100 h-16 sm:h-20 lg:h-[95px]",
             onClick: () => openLightbox(allMedia.findIndex((media2) => media2.id === item.id)),
             children: [
               item.mediaType === "image" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -48080,17 +48079,20 @@ function PropertyGallery({ media }) {
                     playsInline: true
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/30 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white/90 rounded-full p-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { className: "h-3 w-3 text-black" }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/30 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white/90 rounded-full p-1 sm:p-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { className: "h-2 w-2 sm:h-3 sm:w-3 text-black" }) }) })
               ] }),
-              !showAllMedia && index2 === 6 && remainingCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/60 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-white font-semibold text-sm", children: [
+              !showAllMedia && index2 === 6 && remainingCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/60 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-white font-semibold text-xs sm:text-sm", children: [
                 "+",
                 remainingCount,
                 " more"
               ] }) }),
-              item.mediaType === "video" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-1 right-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "text-xs py-0 px-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-2 w-2 mr-1" }),
-                "Video"
-              ] }) }),
+              item.mediaType === "video" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-1 right-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "text-xs py-0 px-1 hidden sm:flex", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-2 w-2 mr-1" }),
+                  "Video"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sm:hidden bg-black/60 rounded-full p-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-2 w-2 text-white" }) })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" })
             ]
           },
@@ -48099,8 +48101,7 @@ function PropertyGallery({ media }) {
         showAllMedia && displayMedia.slice(9).map((item, index2) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
-            className: "rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100",
-            style: { height: "95px" },
+            className: "rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100 h-16 sm:h-20 lg:h-[95px]",
             onClick: () => openLightbox(allMedia.findIndex((media2) => media2.id === item.id)),
             children: [
               item.mediaType === "image" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -48120,12 +48121,15 @@ function PropertyGallery({ media }) {
                     playsInline: true
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/30 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white/90 rounded-full p-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { className: "h-3 w-3 text-black" }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/30 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-white/90 rounded-full p-1 sm:p-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Play, { className: "h-2 w-2 sm:h-3 sm:w-3 text-black" }) }) })
               ] }),
-              item.mediaType === "video" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-1 right-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "text-xs py-0 px-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-2 w-2 mr-1" }),
-                "Video"
-              ] }) }),
+              item.mediaType === "video" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-1 right-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "secondary", className: "text-xs py-0 px-1 hidden sm:flex", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-2 w-2 mr-1" }),
+                  "Video"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sm:hidden bg-black/60 rounded-full p-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Film, { className: "h-2 w-2 text-white" }) })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" })
             ]
           },
@@ -48133,8 +48137,8 @@ function PropertyGallery({ media }) {
         ))
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between text-sm text-muted-foreground", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-muted-foreground gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 sm:gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
           "Total: ",
           allMedia.length,
@@ -48151,7 +48155,7 @@ function PropertyGallery({ media }) {
           " videos"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "All media watermarked with SOUTH DELHI REALTY" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden sm:block", children: "All media watermarked with SOUTH DELHI REALTY" })
     ] })
   ] });
 }

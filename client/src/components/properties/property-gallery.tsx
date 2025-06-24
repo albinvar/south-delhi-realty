@@ -24,10 +24,10 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
   // If there are no media items, show a placeholder
   if (!media || media.length === 0) {
     return (
-      <div className="rounded-lg overflow-hidden bg-gray-200 h-96 flex items-center justify-center mb-8">
+      <div className="rounded-lg overflow-hidden bg-gray-200 h-60 sm:h-96 flex items-center justify-center mb-8">
         <div className="text-center">
-          <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No media available</p>
+          <ImageIcon className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-sm sm:text-base">No media available</p>
         </div>
       </div>
     );
@@ -71,22 +71,22 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
   };
 
   const displayMedia = getDisplayMedia();
-  const remainingCount = allMedia.length - 9; // Featured + 8 thumbnails
+  const remainingCount = allMedia.length - 9;
 
   return (
     <div className="mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold">Property Gallery</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <h2 className="text-lg sm:text-xl font-semibold">Property Gallery</h2>
           <div className="flex gap-2">
             {images.length > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1">
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs sm:text-sm">
                 <ImageIcon className="h-3 w-3" />
                 {images.length} Photo{images.length !== 1 ? 's' : ''}
               </Badge>
             )}
             {videos.length > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1">
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs sm:text-sm">
                 <Film className="h-3 w-3" />
                 {videos.length} Video{videos.length !== 1 ? 's' : ''}
               </Badge>
@@ -98,20 +98,20 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
             variant="outline" 
             size="sm"
             onClick={() => setShowAllMedia(!showAllMedia)}
+            className="text-xs sm:text-sm"
           >
             {showAllMedia ? 'Show Less' : `View All ${allMedia.length} Media`}
           </Button>
         )}
       </div>
 
-      {/* Fixed Size Gallery Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
-        {/* Main Fixed-Size Media Viewer */}
+      {/* Responsive Gallery Layout */}
+      <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4 mb-6">
+        {/* Main Media Viewer - Full width on mobile, 3 columns on desktop */}
         <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
           <DialogTrigger asChild>
             <div 
-              className="lg:col-span-3 rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100"
-              style={{ height: '400px' }} // Fixed height
+              className="lg:col-span-3 rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100 h-64 sm:h-80 lg:h-[400px]"
               onClick={() => openLightbox(allMedia.findIndex(item => item.id === featuredMedia.id))}
             >
               {featuredMedia.mediaType === 'image' ? (
@@ -129,14 +129,14 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
                     playsInline
                   />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/20 transition-colors">
-                    <div className="bg-white/90 rounded-full p-3 shadow-lg">
-                      <Play className="h-8 w-8 text-black" />
+                    <div className="bg-white/90 rounded-full p-2 sm:p-3 shadow-lg">
+                      <Play className="h-6 w-6 sm:h-8 sm:w-8 text-black" />
                     </div>
                   </div>
                 </div>
               )}
-              <div className="absolute top-3 left-3">
-                <Badge className="bg-black/70 text-white">
+              <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
+                <Badge className="bg-black/70 text-white text-xs sm:text-sm">
                   {featuredMedia.mediaType === 'image' ? 'Featured' : 'Video Tour'}
                 </Badge>
               </div>
@@ -144,15 +144,15 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
             </div>
           </DialogTrigger>
 
-          {/* Lightbox Content - Also Fixed Size */}
-          <DialogContent className="max-w-5xl w-full bg-black/95 border-none p-4">
+          {/* Lightbox Content - Mobile Responsive */}
+          <DialogContent className="max-w-[95vw] sm:max-w-5xl w-full bg-black/95 border-none p-2 sm:p-4">
             <VisuallyHidden>
               <DialogTitle>Property Media Gallery</DialogTitle>
               <DialogDescription>
                 View and navigate through property images and videos. Use the arrow buttons to move between media items.
               </DialogDescription>
             </VisuallyHidden>
-            <div className="relative w-full" style={{ height: '70vh' }}>
+            <div className="relative w-full h-[60vh] sm:h-[70vh]">
               <div className="w-full h-full flex items-center justify-center bg-black/50 rounded-lg overflow-hidden">
                 {allMedia[currentIndex]?.mediaType === 'image' ? (
                   <img 
@@ -172,56 +172,55 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
                 )}
               </div>
               
-              {/* Navigation Controls */}
+              {/* Navigation Controls - Responsive */}
               {allMedia.length > 1 && (
                 <>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                    className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-8 w-8 sm:h-10 sm:w-10"
                     onClick={() => navigateMedia('prev')}
                   >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" />
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                    className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-8 w-8 sm:h-10 sm:w-10"
                     onClick={() => navigateMedia('next')}
                   >
-                    <ChevronRight className="h-6 w-6" />
+                    <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" />
                   </Button>
                 </>
               )}
               
-              {/* Close Button */}
+              {/* Close Button - Responsive */}
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute right-4 top-4 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                className="absolute right-2 sm:right-4 top-2 sm:top-4 bg-black/50 hover:bg-black/70 text-white rounded-full h-8 w-8 sm:h-10 sm:w-10"
                 onClick={() => setLightboxOpen(false)}
               >
-                <X className="h-6 w-6" />
+                <X className="h-4 w-4 sm:h-6 sm:w-6" />
               </Button>
               
-              {/* Media Counter and Info */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full">
+              {/* Media Counter and Info - Responsive */}
+              <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 sm:px-4 sm:py-2 rounded-full">
                 <div className="flex items-center gap-2">
-                  {allMedia[currentIndex]?.mediaType === 'video' && <Film className="h-4 w-4" />}
-                  <span>{currentIndex + 1} / {allMedia.length}</span>
+                  {allMedia[currentIndex]?.mediaType === 'video' && <Film className="h-3 w-3 sm:h-4 sm:w-4" />}
+                  <span className="text-xs sm:text-sm">{currentIndex + 1} / {allMedia.length}</span>
                 </div>
               </div>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* Fixed-Size Thumbnail Grid */}
-        <div className="lg:col-span-2 grid grid-cols-2 gap-2">
+        {/* Thumbnail Grid - Full width on mobile, 2 columns on desktop */}
+        <div className="lg:col-span-2 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-2">
           {displayMedia.slice(1, 9).map((item, index) => (
             <div 
               key={item.id} 
-              className="rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100"
-              style={{ height: '95px' }} // Fixed height for thumbnails
+              className="rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100 h-16 sm:h-20 lg:h-[95px]"
               onClick={() => openLightbox(allMedia.findIndex(media => media.id === item.id))}
             >
               {item.mediaType === 'image' ? (
@@ -239,8 +238,8 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
                     playsInline
                   />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <div className="bg-white/90 rounded-full p-1.5">
-                      <Play className="h-3 w-3 text-black" />
+                    <div className="bg-white/90 rounded-full p-1 sm:p-1.5">
+                      <Play className="h-2 w-2 sm:h-3 sm:w-3 text-black" />
                     </div>
                   </div>
                 </div>
@@ -249,17 +248,20 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
               {/* Overlay for "+X more" on last thumbnail when not showing all */}
               {!showAllMedia && index === 6 && remainingCount > 0 && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">+{remainingCount} more</span>
+                  <span className="text-white font-semibold text-xs sm:text-sm">+{remainingCount} more</span>
                 </div>
               )}
               
-              {/* Media type indicator */}
+              {/* Media type indicator - Responsive */}
               {item.mediaType === 'video' && (
                 <div className="absolute top-1 right-1">
-                  <Badge variant="secondary" className="text-xs py-0 px-1">
+                  <Badge variant="secondary" className="text-xs py-0 px-1 hidden sm:flex">
                     <Film className="h-2 w-2 mr-1" />
                     Video
                   </Badge>
+                  <div className="sm:hidden bg-black/60 rounded-full p-1">
+                    <Film className="h-2 w-2 text-white" />
+                  </div>
                 </div>
               )}
               
@@ -271,8 +273,7 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
           {showAllMedia && displayMedia.slice(9).map((item, index) => (
             <div 
               key={item.id} 
-              className="rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100"
-              style={{ height: '95px' }}
+              className="rounded-lg overflow-hidden cursor-pointer relative group bg-gray-100 h-16 sm:h-20 lg:h-[95px]"
               onClick={() => openLightbox(allMedia.findIndex(media => media.id === item.id))}
             >
               {item.mediaType === 'image' ? (
@@ -290,8 +291,8 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
                     playsInline
                   />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <div className="bg-white/90 rounded-full p-1.5">
-                      <Play className="h-3 w-3 text-black" />
+                    <div className="bg-white/90 rounded-full p-1 sm:p-1.5">
+                      <Play className="h-2 w-2 sm:h-3 sm:w-3 text-black" />
                     </div>
                   </div>
                 </div>
@@ -299,10 +300,13 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
               
               {item.mediaType === 'video' && (
                 <div className="absolute top-1 right-1">
-                  <Badge variant="secondary" className="text-xs py-0 px-1">
+                  <Badge variant="secondary" className="text-xs py-0 px-1 hidden sm:flex">
                     <Film className="h-2 w-2 mr-1" />
                     Video
                   </Badge>
+                  <div className="sm:hidden bg-black/60 rounded-full p-1">
+                    <Film className="h-2 w-2 text-white" />
+                  </div>
                 </div>
               )}
               
@@ -312,14 +316,14 @@ export default function PropertyGallery({ media }: PropertyGalleryProps) {
         </div>
       </div>
 
-      {/* Media Summary */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <div className="flex items-center gap-4">
+      {/* Media Summary - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-muted-foreground gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span>Total: {allMedia.length} media files</span>
           {images.length > 0 && <span>• {images.length} images</span>}
           {videos.length > 0 && <span>• {videos.length} videos</span>}
         </div>
-        <span>All media watermarked with SOUTH DELHI REALTY</span>
+        <span className="hidden sm:block">All media watermarked with SOUTH DELHI REALTY</span>
       </div>
     </div>
   );
