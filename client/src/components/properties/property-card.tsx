@@ -29,6 +29,20 @@ function formatCurrency(amount: number, isRent: boolean): string {
 export default function PropertyCard({ property, showFullDetails = false }: PropertyCardProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageError, setImageError] = useState<boolean>(false);
+
+  // Format area unit display
+  const formatAreaUnit = (unit: string) => {
+    const units: Record<string, string> = {
+      'sq-ft': 'sq.ft',
+      'sq-mt': 'sq.mt', 
+      'sq-yd': 'sq.yd',
+      // Legacy support for underscore format
+      sq_ft: 'sq.ft',
+      sq_mt: 'sq.mt',
+      sq_yd: 'sq.yd'
+    };
+    return units[unit] || unit;
+  };
   
   // Get media for property
   useEffect(() => {
@@ -145,7 +159,7 @@ export default function PropertyCard({ property, showFullDetails = false }: Prop
             {property.area ? (
               <div className="flex items-center">
                 <Square className="h-4 w-4 mr-1" />
-                <span className="text-sm">{property.area} sq. ft</span>
+                <span className="text-sm">{property.area} {formatAreaUnit(property.areaUnit)}</span>
               </div>
             ) : (
               <div />

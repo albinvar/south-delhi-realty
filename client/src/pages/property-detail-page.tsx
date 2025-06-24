@@ -5,20 +5,20 @@ import SEOHead, { generatePropertyStructuredData } from "@/components/seo/seo-he
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle
 } from "@/components/ui/card";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -31,13 +31,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { PropertyWithRelations, insertInquirySchema } from "@shared/schema";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeftRight,
-  Bath,
-  Bed,
-  CalendarIcon,
-  Heart,
-  MapPin,
-  Share2
+    ArrowLeftRight,
+    Bath,
+    Bed,
+    CalendarIcon,
+    Heart,
+    MapPin,
+    Share2
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -183,11 +183,15 @@ export default function PropertyDetailPage() {
   
   const getAreaWithUnit = () => {
     const units: Record<string, string> = {
+      'sq-ft': 'sq.ft',
+      'sq-mt': 'sq.mt', 
+      'sq-yd': 'sq.yd',
+      // Legacy support for underscore format
       sq_ft: 'sq.ft',
       sq_mt: 'sq.mt',
       sq_yd: 'sq.yd'
     };
-    return `${property.area} ${units[property.areaUnit]}`;
+    return `${property.area} ${units[property.areaUnit] || property.areaUnit}`;
   };
 
   const formatPropertyType = (type: string) => {

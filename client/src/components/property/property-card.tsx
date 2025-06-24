@@ -1,12 +1,11 @@
-import { Property, PropertyWithRelations, PropertyMedia } from "@shared/schema";
-import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardFooter,
+    Card,
+    CardContent
 } from "@/components/ui/card";
-import { Heart, MapPin, Bath, Bed, SquareIcon } from "lucide-react";
+import { PropertyMedia, PropertyWithRelations } from "@shared/schema";
+import { Bath, Bed, Heart, MapPin, SquareIcon } from "lucide-react";
+import { Link } from "wouter";
 
 interface PropertyCardProps {
   property: PropertyWithRelations;
@@ -37,7 +36,16 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
   // Format area based on unit
   const formatArea = (area: number, unit: string) => {
-    return `${area} ${unit}`;
+    const units: Record<string, string> = {
+      'sq-ft': 'sq.ft',
+      'sq-mt': 'sq.mt', 
+      'sq-yd': 'sq.yd',
+      // Legacy support for underscore format
+      sq_ft: 'sq.ft',
+      sq_mt: 'sq.mt',
+      sq_yd: 'sq.yd'
+    };
+    return `${area} ${units[unit] || unit}`;
   };
 
   // Find the featured image or use the first available

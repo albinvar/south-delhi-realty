@@ -45417,6 +45417,18 @@ function formatCurrency(amount, isRent) {
 function PropertyCard({ property, showFullDetails = false }) {
   const [imageSrc, setImageSrc] = reactExports.useState(null);
   const [imageError, setImageError] = reactExports.useState(false);
+  const formatAreaUnit = (unit) => {
+    const units = {
+      "sq-ft": "sq.ft",
+      "sq-mt": "sq.mt",
+      "sq-yd": "sq.yd",
+      // Legacy support for underscore format
+      sq_ft: "sq.ft",
+      sq_mt: "sq.mt",
+      sq_yd: "sq.yd"
+    };
+    return units[unit] || unit;
+  };
   reactExports.useEffect(() => {
     try {
       if (property.media && Array.isArray(property.media) && property.media.length > 0) {
@@ -45498,7 +45510,8 @@ function PropertyCard({ property, showFullDetails = false }) {
         /* @__PURE__ */ jsxRuntimeExports.jsx(Square, { className: "h-4 w-4 mr-1" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm", children: [
           property.area,
-          " sq. ft"
+          " ",
+          formatAreaUnit(property.areaUnit)
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", {})
     ] }) })
@@ -48041,11 +48054,15 @@ function PropertyDetailPage() {
   };
   const getAreaWithUnit = () => {
     const units = {
+      "sq-ft": "sq.ft",
+      "sq-mt": "sq.mt",
+      "sq-yd": "sq.yd",
+      // Legacy support for underscore format
       sq_ft: "sq.ft",
       sq_mt: "sq.mt",
       sq_yd: "sq.yd"
     };
-    return `${property.area} ${units[property.areaUnit]}`;
+    return `${property.area} ${units[property.areaUnit] || property.areaUnit}`;
   };
   const formatPropertyType = (type) => {
     return type.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());

@@ -1,27 +1,27 @@
-import { Property, PropertyWithRelations, NearbyFacility } from "@shared/schema";
-import { 
-  Badge 
+import {
+    Badge
 } from "@/components/ui/badge";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle
 } from "@/components/ui/card";
-import { 
-  Bed, 
-  Bath, 
-  Maximize, 
-  Home, 
-  Calendar, 
-  MapPin, 
-  Compass, 
-  Car, 
-  Tag, 
-  Phone, 
-  ScrollText, 
-  Building,
-  CheckCircle2
+import { NearbyFacility, PropertyWithRelations } from "@shared/schema";
+import {
+    Bath,
+    Bed,
+    Building,
+    Calendar,
+    Car,
+    CheckCircle2,
+    Compass,
+    Home,
+    MapPin,
+    Maximize,
+    Phone,
+    ScrollText,
+    Tag
 } from "lucide-react";
 
 interface PropertyDetailsProps {
@@ -30,6 +30,20 @@ interface PropertyDetailsProps {
 }
 
 export default function PropertyDetails({ property, facilities = [] }: PropertyDetailsProps) {
+  // Format area unit display
+  const formatAreaUnit = (unit: string) => {
+    const units: Record<string, string> = {
+      'sq-ft': 'sq.ft',
+      'sq-mt': 'sq.mt', 
+      'sq-yd': 'sq.yd',
+      // Legacy support for underscore format
+      sq_ft: 'sq.ft',
+      sq_mt: 'sq.mt',
+      sq_yd: 'sq.yd'
+    };
+    return units[unit] || unit;
+  };
+
   // Format price display based on status (sale/rent)
   const formatPrice = (price: number, status: string) => {
     // For sale properties
@@ -94,7 +108,7 @@ export default function PropertyDetails({ property, facilities = [] }: PropertyD
           
           <div className="flex items-center">
             <Maximize className="h-5 w-5 mr-2 text-primary" />
-            <span>{property.area} {property.areaUnit}</span>
+            <span>{property.area} {formatAreaUnit(property.areaUnit)}</span>
           </div>
           
           <div className="flex items-center">
