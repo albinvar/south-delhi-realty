@@ -89,6 +89,21 @@ async function startServer() {
             },
             crossOriginEmbedderPolicy: false
         }));
+        app.use((req, res, next) => {
+            res.setHeader('Permissions-Policy', [
+                'browsing-topics=()',
+                'join-ad-interest-group=()',
+                'run-ad-auction=()',
+                'attribution-reporting=()',
+                'private-state-token-issuance=()',
+                'private-state-token-redemption=()',
+                'geolocation=(self)',
+                'camera=()',
+                'microphone=()',
+                'display-capture=()'
+            ].join(', '));
+            next();
+        });
         app.use((0, compression_1.default)({
             level: 6,
             threshold: 1024,

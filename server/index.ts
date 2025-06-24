@@ -72,6 +72,26 @@ async function startServer() {
       crossOriginEmbedderPolicy: false
     }));
 
+    // Set custom Permissions-Policy header to explicitly disable Privacy Sandbox features
+    app.use((req: any, res: any, next: any) => {
+      res.setHeader(
+        'Permissions-Policy', 
+        [
+          'browsing-topics=()',
+          'join-ad-interest-group=()',
+          'run-ad-auction=()',
+          'attribution-reporting=()',
+          'private-state-token-issuance=()',
+          'private-state-token-redemption=()',
+          'geolocation=(self)',
+          'camera=()',
+          'microphone=()',
+          'display-capture=()'
+        ].join(', ')
+      );
+      next();
+    });
+
     // Compression middleware for production
     app.use(compression({
       level: 6,
