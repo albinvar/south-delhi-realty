@@ -34,9 +34,11 @@ async function fixNearbyFacilitiesTable() {
     console.log('📋 Existing columns:', existingColumns);
 
     const requiredColumns = [
-      { name: 'distance_value', type: 'INT NULL', description: 'Numeric distance in meters' },
-      { name: 'latitude', type: 'TEXT NULL', description: 'Facility latitude coordinates' },
-      { name: 'longitude', type: 'TEXT NULL', description: 'Facility longitude coordinates' }
+      { name: 'distance_value', type: 'INT NULL', after: 'distance', description: 'Numeric distance in meters' },
+      { name: 'latitude', type: 'TEXT NULL', after: 'facility_type', description: 'Facility latitude coordinates' },
+      { name: 'longitude', type: 'TEXT NULL', after: 'latitude', description: 'Facility longitude coordinates' },
+      { name: 'created_at', type: 'TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP', after: 'longitude', description: 'Record creation timestamp' },
+      { name: 'updated_at', type: 'TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP', after: 'created_at', description: 'Record update timestamp' }
     ];
 
     // Add missing columns
@@ -48,7 +50,7 @@ async function fixNearbyFacilitiesTable() {
           await connection.execute(`
             ALTER TABLE nearby_facilities 
             ADD COLUMN ${column.name} ${column.type} 
-            AFTER ${column.name === 'distance_value' ? 'distance' : 'facility_type'}
+            AFTER ${column.after}
           `);
           console.log(`✅ Successfully added ${column.name} column`);
         } catch (error) {
@@ -62,7 +64,7 @@ async function fixNearbyFacilitiesTable() {
     // Verify final table structure
     console.log('🔍 Verifying final table structure...');
     const [finalColumns] = await connection.execute(`
-      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE 
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
       FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_NAME = 'nearby_facilities' 
       AND TABLE_SCHEMA = ?
@@ -71,10 +73,11 @@ async function fixNearbyFacilitiesTable() {
 
     console.log('📋 Final table structure:');
     finalColumns.forEach(col => {
-      console.log(`  - ${col.COLUMN_NAME}: ${col.DATA_TYPE} (${col.IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL'})`);
+      console.log(`  - ${col.COLUMN_NAME}: ${col.DATA_TYPE} (${col.IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL'}) ${col.COLUMN_DEFAULT ? `DEFAULT ${col.COLUMN_DEFAULT}` : ''}`);
     });
 
     console.log('🎉 Database migration completed successfully!');
+    console.log('🔧 All required columns have been added to nearby_facilities table');
 
   } catch (error) {
     console.error('❌ Migration failed:', error);
