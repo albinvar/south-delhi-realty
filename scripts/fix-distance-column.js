@@ -1,5 +1,8 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+import dotenv from 'dotenv';
+import mysql from 'mysql2/promise';
+
+// Load environment variables
+dotenv.config();
 
 async function addDistanceValueColumn() {
   let connection;
