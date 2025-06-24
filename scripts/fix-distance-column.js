@@ -4,7 +4,7 @@ import mysql from 'mysql2/promise';
 // Load environment variables
 dotenv.config();
 
-async function addDistanceValueColumn() {
+async function fixNearbyFacilitiesTable() {
   let connection;
   
   try {
@@ -21,88 +21,71 @@ async function addDistanceValueColumn() {
 
     console.log('✅ Connected to database');
 
-    // Check if column already exists
-    console.log('🔍 Checking if distance_value column exists...');
+    // Check existing columns
+    console.log('🔍 Checking existing columns in nearby_facilities table...');
     const [columns] = await connection.execute(`
       SELECT COLUMN_NAME 
       FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_NAME = 'nearby_facilities' 
-      AND COLUMN_NAME = 'distance_value'
       AND TABLE_SCHEMA = ?
     `, [process.env.DB_NAME]);
 
-    if (columns.length > 0) {
-      console.log('✅ distance_value column already exists');
-      return;
-    }
+    const existingColumns = columns.map(col => col.COLUMN_NAME);
+    console.log('📋 Existing columns:', existingColumns);
 
-    // Add the missing column
-    console.log('➕ Adding distance_value column...');
-    await connection.execute(`
-      ALTER TABLE nearby_facilities 
-      ADD COLUMN distance_value INT NULL 
-      AFTER distance
-    `);
+    const requiredColumns = [
+      { name: 'distance_value', type: 'INT NULL', description: 'Numeric distance in meters' },
+      { name: 'latitude', type: 'TEXT NULL', description: 'Facility latitude coordinates' },
+      { name: 'longitude', type: 'TEXT NULL', description: 'Facility longitude coordinates' }
+    ];
 
-    console.log('✅ Successfully added distance_value column');
-
-    // Update existing records to calculate distance_value if possible
-    console.log('🔄 Updating existing records...');
-    const [facilities] = await connection.execute(`
-      SELECT id, distance FROM nearby_facilities 
-      WHERE distance_value IS NULL AND distance IS NOT NULL
-    `);
-
-    for (const facility of facilities) {
-      try {
-        // Extract numeric value from distance string
-        const distanceMatch = facility.distance.match(/^(\d+(\.\d+)?)/);
-        if (distanceMatch) {
-          const distanceNumeric = parseFloat(distanceMatch[1]);
-          let distanceValue;
-          
-          if (facility.distance.toLowerCase().includes('km')) {
-            distanceValue = Math.round(distanceNumeric * 1000); // Convert km to meters
-          } else if (facility.distance.toLowerCase().includes('m')) {
-            distanceValue = Math.round(distanceNumeric); // Already in meters
-          } else {
-            // Assume km if no unit specified
-            distanceValue = Math.round(distanceNumeric * 1000);
-          }
-
+    // Add missing columns
+    for (const column of requiredColumns) {
+      if (!existingColumns.includes(column.name)) {
+        console.log(`➕ Adding missing column: ${column.name} (${column.description})`);
+        
+        try {
           await connection.execute(`
-            UPDATE nearby_facilities 
-            SET distance_value = ? 
-            WHERE id = ?
-          `, [distanceValue, facility.id]);
-          
-          console.log(`  Updated facility ${facility.id}: ${facility.distance} -> ${distanceValue}m`);
+            ALTER TABLE nearby_facilities 
+            ADD COLUMN ${column.name} ${column.type} 
+            AFTER ${column.name === 'distance_value' ? 'distance' : 'facility_type'}
+          `);
+          console.log(`✅ Successfully added ${column.name} column`);
+        } catch (error) {
+          console.error(`❌ Error adding ${column.name} column:`, error.message);
         }
-      } catch (error) {
-        console.error(`  Failed to update facility ${facility.id}:`, error.message);
+      } else {
+        console.log(`✅ Column ${column.name} already exists`);
       }
     }
 
-    console.log('✅ Migration completed successfully');
+    // Verify final table structure
+    console.log('🔍 Verifying final table structure...');
+    const [finalColumns] = await connection.execute(`
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'nearby_facilities' 
+      AND TABLE_SCHEMA = ?
+      ORDER BY ORDINAL_POSITION
+    `, [process.env.DB_NAME]);
+
+    console.log('📋 Final table structure:');
+    finalColumns.forEach(col => {
+      console.log(`  - ${col.COLUMN_NAME}: ${col.DATA_TYPE} (${col.IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL'})`);
+    });
+
+    console.log('🎉 Database migration completed successfully!');
 
   } catch (error) {
     console.error('❌ Migration failed:', error);
-    throw error;
+    process.exit(1);
   } finally {
     if (connection) {
       await connection.end();
-      console.log('🔗 Database connection closed');
+      console.log('🔌 Database connection closed');
     }
   }
 }
 
 // Run the migration
-addDistanceValueColumn()
-  .then(() => {
-    console.log('🎉 Migration script completed');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('💥 Migration script failed:', error);
-    process.exit(1);
-  }); 
+fixNearbyFacilitiesTable(); 
