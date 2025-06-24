@@ -38,9 +38,9 @@ export default function HomePage() {
   return (
     <>
       <SEOHead
-        title="Premium Real Estate in South Delhi - Luxury Properties & Expert Services"
-        description="Discover premium real estate in South Delhi. Browse luxury apartments, independent houses, villas & commercial properties in Greater Kailash, Defence Colony, Lajpat Nagar. Expert property consultants with 15+ years experience."
-        keywords="south delhi real estate, premium properties south delhi, luxury apartments south delhi, independent houses south delhi, commercial property south delhi, greater kailash properties, defence colony real estate, lajpat nagar properties, property dealers south delhi, real estate agents south delhi"
+        title="Properties in South Delhi | South Delhi Realty - #1 Real Estate Agency"
+        description="Looking for properties in South Delhi? South Delhi Realty offers premium properties in South Delhi including luxury apartments, independent houses, villas in Greater Kailash, Defence Colony, Lajpat Nagar. Top-rated South Delhi realty services with 15+ years experience. Find your dream property in South Delhi today!"
+        keywords="properties in south delhi, south delhi properties, south delhi realty, real estate south delhi, premium properties south delhi, luxury apartments south delhi, independent houses south delhi, commercial property south delhi, greater kailash properties, defence colony real estate, lajpat nagar properties, property dealers south delhi, real estate agents south delhi, buy property south delhi, rent property south delhi, south delhi property consultant, best properties south delhi, south delhi property portal, property investment south delhi"
         image="/sdrlogo.png"
         url="https://southdelhirealty.com/"
         type="website"

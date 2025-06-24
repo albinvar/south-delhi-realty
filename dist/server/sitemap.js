@@ -11,8 +11,8 @@ router.get('/sitemap.xml', async (req, res) => {
         const properties = await storage_1.storage.getProperties();
         const baseUrl = process.env.CLIENT_URL || 'https://southdelhirealty.com';
         let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Homepage -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <!-- Homepage - Highest Priority -->
   <url>
     <loc>${baseUrl}/</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
@@ -20,55 +20,12 @@ router.get('/sitemap.xml', async (req, res) => {
     <priority>1.0</priority>
   </url>
   
-  <!-- Properties listing page -->
+  <!-- Properties listing page - High Priority -->
   <url>
     <loc>${baseUrl}/properties</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
-  </url>
-  
-  <!-- Static pages -->
-  <url>
-    <loc>${baseUrl}/terms</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  
-  <url>
-    <loc>${baseUrl}/privacy</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  
-  <url>
-    <loc>${baseUrl}/cookies</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  
-  <url>
-    <loc>${baseUrl}/about</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  
-  <url>
-    <loc>${baseUrl}/contact</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  
-  <url>
-    <loc>${baseUrl}/services</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
   </url>`;
         properties.forEach(property => {
             const lastModified = property.updatedAt ? new Date(property.updatedAt).toISOString() : new Date().toISOString();
@@ -77,27 +34,101 @@ router.get('/sitemap.xml', async (req, res) => {
     <loc>${baseUrl}/property/${property.slug}</loc>
     <lastmod>${lastModified}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.8</priority>`;
+            if (property.media && property.media.length > 0) {
+                property.media.forEach((media) => {
+                    if (media.mediaType === 'image' && media.cloudinaryUrl) {
+                        sitemap += `
+    <image:image>
+      <image:loc>${media.cloudinaryUrl}</image:loc>
+      <image:title>${property.title} - South Delhi Property</image:title>
+      <image:caption>Premium ${property.propertyType} property in South Delhi</image:caption>
+    </image:image>`;
+                    }
+                });
+            }
+            sitemap += `
   </url>`;
         });
-        const categories = ['apartment', 'independent-house', 'villa', 'commercial'];
+        const categories = [
+            { slug: 'apartment', name: 'Apartments in South Delhi' },
+            { slug: 'independent-house', name: 'Independent Houses in South Delhi' },
+            { slug: 'villa', name: 'Villas in South Delhi' },
+            { slug: 'commercial', name: 'Commercial Properties in South Delhi' },
+            { slug: 'luxury', name: 'Luxury Properties in South Delhi' },
+            { slug: 'budget', name: 'Budget Properties in South Delhi' }
+        ];
         categories.forEach(category => {
             sitemap += `
   <url>
-    <loc>${baseUrl}/properties?type=${category}</loc>
+    <loc>${baseUrl}/properties?type=${category.slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`;
         });
-        const locations = ['greater-kailash', 'defence-colony', 'lajpat-nagar', 'khan-market', 'safdarjung', 'green-park', 'hauz-khas', 'vasant-vihar', 'south-extension'];
+        const locations = [
+            { slug: 'greater-kailash', name: 'Greater Kailash Properties' },
+            { slug: 'defence-colony', name: 'Defence Colony Properties' },
+            { slug: 'lajpat-nagar', name: 'Lajpat Nagar Properties' },
+            { slug: 'khan-market', name: 'Khan Market Properties' },
+            { slug: 'safdarjung', name: 'Safdarjung Properties' },
+            { slug: 'green-park', name: 'Green Park Properties' },
+            { slug: 'hauz-khas', name: 'Hauz Khas Properties' },
+            { slug: 'vasant-vihar', name: 'Vasant Vihar Properties' },
+            { slug: 'south-extension', name: 'South Extension Properties' },
+            { slug: 'nehru-place', name: 'Nehru Place Properties' },
+            { slug: 'kalkaji', name: 'Kalkaji Properties' },
+            { slug: 'cr-park', name: 'CR Park Properties' }
+        ];
         locations.forEach(location => {
             sitemap += `
   <url>
-    <loc>${baseUrl}/properties?location=${location}</loc>
+    <loc>${baseUrl}/properties?location=${location.slug}</loc>
     <lastmod>${new Date().toISOString()}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
+  </url>`;
+        });
+        const statuses = [
+            { slug: 'sale', name: 'Properties for Sale in South Delhi' },
+            { slug: 'rent', name: 'Properties for Rent in South Delhi' }
+        ];
+        statuses.forEach(status => {
+            sitemap += `
+  <url>
+    <loc>${baseUrl}/properties?status=${status.slug}</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+        });
+        categories.slice(0, 4).forEach(category => {
+            locations.slice(0, 6).forEach(location => {
+                sitemap += `
+  <url>
+    <loc>${baseUrl}/properties?type=${category.slug}&location=${location.slug}</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+            });
+        });
+        const staticPages = [
+            { slug: 'about', priority: '0.7', changefreq: 'monthly' },
+            { slug: 'contact', priority: '0.7', changefreq: 'weekly' },
+            { slug: 'services', priority: '0.7', changefreq: 'monthly' },
+            { slug: 'terms', priority: '0.5', changefreq: 'yearly' },
+            { slug: 'privacy', priority: '0.5', changefreq: 'yearly' },
+            { slug: 'cookies', priority: '0.5', changefreq: 'yearly' }
+        ];
+        staticPages.forEach(page => {
+            sitemap += `
+  <url>
+    <loc>${baseUrl}/${page.slug}</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
   </url>`;
         });
         sitemap += `
@@ -114,29 +145,30 @@ router.get('/robots.txt', (req, res) => {
     const baseUrl = process.env.CLIENT_URL || 'https://southdelhirealty.com';
     const robots = `User-agent: *
 Allow: /
+Allow: /properties
+Allow: /property/
+Allow: /about
+Allow: /contact
+Allow: /services
+
+# Block admin and private areas
 Disallow: /admin/
 Disallow: /auth/
 Disallow: /api/
 Disallow: /private/
+Disallow: /login
+Disallow: /register
 
-# Sitemap
-Sitemap: ${baseUrl}/sitemap.xml
-
-# Crawl-delay for respectful crawling
-Crawl-delay: 1
-
-# Block access to admin and private areas
-User-agent: *
-Disallow: /admin/
-Disallow: /auth/
-Disallow: /api/admin/
-Disallow: /api/auth/
+# Block unwanted query parameters
+Disallow: /*?*&*
+Disallow: /*?*sort=*
+Disallow: /*?*page=*
+Disallow: /*?*limit=*
 Disallow: /*.json$
-Disallow: /*?*&
-Disallow: /*?*sort=
-Disallow: /*?*page=
+Disallow: /*.xml$
+Disallow: /*_escaped_fragment_
 
-# Allow important assets
+# Allow important static assets
 Allow: /assets/
 Allow: /*.css$
 Allow: /*.js$
@@ -145,7 +177,32 @@ Allow: /*.jpg$
 Allow: /*.jpeg$
 Allow: /*.gif$
 Allow: /*.svg$
-Allow: /*.webp$`;
+Allow: /*.webp$
+Allow: /*.ico$
+Allow: /sdrlogo.png
+Allow: /favicon.ico
+
+# Special directives for major search engines
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 2
+
+# Sitemap location
+Sitemap: ${baseUrl}/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Host directive for preferred domain
+Host: ${baseUrl}`;
     res.set('Content-Type', 'text/plain');
     res.send(robots);
 });

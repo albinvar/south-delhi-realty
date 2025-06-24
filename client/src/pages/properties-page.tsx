@@ -275,7 +275,7 @@ export default function PropertiesPage() {
     return items;
   };
 
-  // Generate dynamic SEO based on current filters
+  // Generate dynamic SEO based on current filters - Enhanced for target keywords
   const generateSEOData = () => {
     const type = searchParams.get('type');
     const location = searchParams.get('location');
@@ -283,42 +283,56 @@ export default function PropertiesPage() {
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
 
-    let title = 'Properties in South Delhi';
-    let description = 'Browse premium real estate properties in South Delhi. Find your perfect home or investment opportunity.';
-    let keywords = 'south delhi properties, real estate south delhi';
+    let title = 'Properties in South Delhi | South Delhi Realty - Premium Real Estate';
+    let description = 'Browse premium properties in South Delhi with South Delhi Realty. Find apartments, independent houses, villas & commercial properties in prime South Delhi locations. Expert property consultants available.';
+    let keywords = 'properties in south delhi, south delhi properties, south delhi realty, real estate south delhi, premium properties south delhi';
 
-    // Customize based on filters
+    // Customize based on property type
     if (type) {
       const typeFormatted = type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      title = `${typeFormatted} Properties in South Delhi`;
-      description = `Find ${typeFormatted.toLowerCase()} properties in South Delhi. Premium ${typeFormatted.toLowerCase()} listings with photos, prices, and details.`;
-      keywords += `, ${type} south delhi, ${typeFormatted.toLowerCase()} properties`;
+      title = `${typeFormatted} Properties in South Delhi | South Delhi Realty`;
+      description = `Find premium ${typeFormatted.toLowerCase()} properties in South Delhi with South Delhi Realty. Best ${typeFormatted.toLowerCase()} deals with verified listings and expert guidance.`;
+      keywords += `, ${type} south delhi, ${typeFormatted.toLowerCase()} properties south delhi, ${type} for sale south delhi`;
     }
 
+    // Customize based on location
     if (location) {
       const locationFormatted = location.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      title = `Properties in ${locationFormatted}, South Delhi`;
-      description = `Discover premium properties in ${locationFormatted}, South Delhi. Best deals on residential and commercial properties.`;
-      keywords += `, ${location} properties, real estate ${locationFormatted}`;
+      title = `Properties in ${locationFormatted}, South Delhi | South Delhi Realty`;
+      description = `Discover premium properties in ${locationFormatted}, South Delhi with South Delhi Realty. Best real estate deals in ${locationFormatted} with professional service.`;
+      keywords += `, ${location} properties, real estate ${locationFormatted}, properties in ${locationFormatted} south delhi`;
     }
 
+    // Customize based on sale/rent status
     if (status) {
       const statusText = status === 'sale' ? 'Sale' : 'Rent';
-      title = `Properties for ${statusText} in South Delhi`;
-      description = `Find properties for ${statusText.toLowerCase()} in South Delhi. Best ${statusText.toLowerCase()} deals with verified listings.`;
-      keywords += `, ${status} properties south delhi, property ${status}`;
+      title = `Properties for ${statusText} in South Delhi | South Delhi Realty`;
+      description = `Find premium properties for ${statusText.toLowerCase()} in South Delhi. South Delhi Realty offers best ${statusText.toLowerCase()} deals with verified listings and expert consultation.`;
+      keywords += `, ${status} properties south delhi, property ${status} south delhi, ${status === 'sale' ? 'buy' : 'rent'} property south delhi`;
     }
 
+    // Add price range to title and description
     if (minPrice && maxPrice) {
       const priceRange = `₹${minPrice} - ₹${maxPrice}`;
       title += ` | ${priceRange}`;
-      description += ` Price range: ${priceRange}.`;
+      description += ` Price range: ${priceRange}. Affordable to luxury options available.`;
+      keywords += `, property prices south delhi, ${status === 'sale' ? 'property cost' : 'rental prices'} south delhi`;
+    }
+
+    // Ensure title is not too long for SEO
+    if (title.length > 60) {
+      title = title.substring(0, 57) + '...';
+    }
+
+    // Ensure description is optimal for SEO
+    if (description.length > 160) {
+      description = description.substring(0, 157) + '...';
     }
 
     return {
       title,
-      description: description.length > 160 ? description.substring(0, 157) + '...' : description,
-      keywords,
+      description,
+      keywords: keywords + ', south delhi property portal, property investment south delhi, real estate consultant south delhi',
       url: `https://southdelhirealty.com/properties${window.location.search}`
     };
   };
