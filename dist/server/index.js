@@ -125,15 +125,20 @@ async function startServer() {
             app.use((0, morgan_1.default)('dev'));
         }
         const nodeEnv = (process.env.NODE_ENV || 'development').trim();
+        const allowedOriginsFromEnv = process.env.ALLOWED_ORIGINS
+            ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+            : [];
         const allowedOrigins = nodeEnv === 'production'
-            ? [
-                'https://south-delhi-realty-4g75c.ondigitalocean.app',
-                'https://southdelhirealty.com',
-                'http://localhost:7822',
-                'http://127.0.0.1:7822',
-                'http://localhost:5000',
-                'http://127.0.0.1:5000'
-            ]
+            ? allowedOriginsFromEnv.length > 0
+                ? allowedOriginsFromEnv
+                : [
+                    'https://south-delhi-realty-a8lwn.ondigitalocean.app',
+                    'https://southdelhirealty.com',
+                    'http://localhost:7822',
+                    'http://127.0.0.1:7822',
+                    'http://localhost:5000',
+                    'http://127.0.0.1:5000'
+                ]
             : [
                 'http://localhost:3000',
                 'http://localhost:5000',
@@ -142,7 +147,8 @@ async function startServer() {
                 'http://127.0.0.1:5000',
                 'http://127.0.0.1:7822',
                 'https://southdelhirealty.com',
-                'https://south-delhi-realty-4g75c.ondigitalocean.app'
+                'https://south-delhi-realty-a8lwn.ondigitalocean.app',
+                ...allowedOriginsFromEnv
             ];
         console.log(`CORS allowed origins: ${JSON.stringify(allowedOrigins)}`);
         const corsOptions = {
