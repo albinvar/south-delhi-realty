@@ -14,12 +14,15 @@ interface EmailConfig {
 // Get email configuration from environment variables
 const getEmailConfig = (): EmailConfig => {
   const config = {
-    host: process.env.EMAIL_HOST || 'mail.southdelhirealty.com',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: process.env.EMAIL_SECURE === 'true',
-    user: process.env.EMAIL_USER || 'admin@southdelhirealty.com',
-    pass: process.env.EMAIL_PASS || 'Biju@123',
-    from: process.env.EMAIL_FROM || 'admin@southdelhirealty.com'
+    host: process.env.EMAIL_HOST,
+    // Port 587 is the standard submission port (recommended for authenticated SMTP)
+    // Port 25 is often blocked by hosting providers
+    // Port 465 is for SSL/TLS (set secure: true if using this)
+    port: parseInt(process.env.EMAIL_PORT),
+    secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for 587/25
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+    from: process.env.EMAIL_FROM
   };
 
   // Log configuration status (without sensitive data)
