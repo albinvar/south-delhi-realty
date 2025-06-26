@@ -1,0 +1,60 @@
+services:
+  # South Delhi Realty Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: southdelhirealty-app
+    restart: unless-stopped
+    ports:
+      - "7822:7822"
+    environment:
+      # Database Configuration (using external database)
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+      
+      # Server Configuration
+      - NODE_ENV=${NODE_ENV}
+      - PORT=7822
+      - LOG_LEVEL=${LOG_LEVEL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      
+      # Client Configuration
+      - CLIENT_URL=${CLIENT_URL}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      
+      # Cloudinary Configuration
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      
+      # Google OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      
+      # Email Configuration
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_SECURE=${EMAIL_SECURE}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - southdelhirealty-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:7822/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+networks:
+  southdelhirealty-network:
+    driver: bridge 
