@@ -75,11 +75,14 @@ temp
 !client/public/*.gif
 !client/public/*.svg
 
-# Development scripts
+# Development scripts (but keep build scripts)
 scripts/deploy-*
 scripts/check-*
 *.sh
 !docker-start.sh
+!scripts/build-client.cjs
+!scripts/prepare-deployment.js
+!scripts/pre-deploy-check.cjs
 
 # Backup files
 *.backup
