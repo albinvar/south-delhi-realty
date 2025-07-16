@@ -14,7 +14,7 @@ async function deploySessionFixes() {
   try {
     console.log('1. 🧪 Testing session store...');
     try {
-      await execAsync('node scripts/test-session-store.js');
+      await execAsync('node scripts/test-session-store.cjs');
       console.log('✅ Session store test passed');
     } catch (error) {
       console.log('⚠️  Session store test failed, but continuing...');
