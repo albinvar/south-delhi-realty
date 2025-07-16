@@ -20,7 +20,6 @@
     "deploy:do": "npm run build && npm run deploy:upload",
     "deploy:upload": "echo 'Upload to DigitalOcean droplet using rsync or git'",
     "init-db": "node init-db.js",
-    "init-superadmin": "node scripts/init-superadmin.js",
     "init-xampp": "chmod +x init-xampp-db.sh && ./init-xampp-db.sh",
     "init-ubuntu": "bash scripts/init-ubuntu-mysql.sh",
     "deploy-ubuntu": "bash scripts/deploy-ubuntu.sh",
@@ -51,10 +50,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate:mysql",
     "db:studio": "drizzle-kit studio",
-    "verify:production": "node scripts/verify-production-ready.js",
-    "tax-service": "node services/tax-email-service.js",
-    "tax-service:dev": "node scripts/start-tax-service.js",
-    "tax-service:pm2": "pm2 start services/tax-email-service.js --name tax-email-service"
+    "verify:production": "node scripts/verify-production-ready.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
