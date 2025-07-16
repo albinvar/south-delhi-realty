@@ -188,17 +188,19 @@ async function startServer() {
     // Configure session middleware with improved production settings
     const sessionConfig: session.SessionOptions = {
       secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-      resave: false,
-      saveUninitialized: false,
+      resave: true, // Force session save even if not modified
+      saveUninitialized: true, // Save uninitialized sessions
       store: storage.sessionStore,
       name: 'southdelhi.session',
       proxy: true, // Trust the reverse proxy
+      rolling: true, // Reset the cookie Max-Age on every request
       cookie: {
         secure: false, // Set to false for HTTP behind reverse proxy
         sameSite: 'lax' as const, // Use 'lax' for better compatibility
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         httpOnly: true,
-        domain: undefined // Remove domain restriction for now
+        domain: undefined, // Remove domain restriction for now
+        path: '/' // Ensure cookie is available for all paths
       }
     };
 
@@ -228,14 +230,22 @@ async function startServer() {
           sessionExists: !!req.session,
           sessionData: req.session ? {
             passport: req.session.passport,
-            cookie: req.session.cookie
+            cookie: {
+              secure: req.session.cookie.secure,
+              sameSite: req.session.cookie.sameSite,
+              maxAge: req.session.cookie.maxAge,
+              httpOnly: req.session.cookie.httpOnly,
+              domain: req.session.cookie.domain,
+              path: req.session.cookie.path
+            }
           } : null,
           isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
           user: req.user ? { id: req.user.id, username: req.user.username } : null,
           cookies: req.headers.cookie ? req.headers.cookie.substring(0, 100) + '...' : 'missing',
           userAgent: req.headers['user-agent'] ? 'present' : 'missing',
           origin: req.headers.origin || 'not-set',
-          referer: req.headers.referer || 'not-set'
+          referer: req.headers.referer || 'not-set',
+          setCookieHeaders: res.getHeaders()['set-cookie'] || 'none'
         });
       }
       next();

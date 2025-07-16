@@ -273,8 +273,25 @@ router.post('/login', (req, res, next) => {
         });
       }
       
-      console.log('✅ Login successful for user:', user.username);
-      return res.json(user);
+      // Manually save the session to ensure it's persisted
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('🚨 Session save error:', saveErr);
+          return res.status(500).json({ 
+            message: 'Failed to save session. Please try again.',
+            error: 'SESSION_SAVE_ERROR'
+          });
+        }
+        
+        console.log('✅ Login successful for user:', user.username);
+        console.log('✅ Session saved successfully:', {
+          sessionID: req.sessionID,
+          passport: (req.session as any).passport,
+          cookie: req.session.cookie
+        });
+        
+        return res.json(user);
+      });
     });
   })(req, res, next);
 });
