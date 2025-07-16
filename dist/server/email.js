@@ -3,17 +3,30 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendUserConfirmationEmail = exports.sendTestEmail = exports.testEmailConfiguration = exports.sendInquiryNotification = void 0;
+exports.sendUserConfirmationEmail = exports.sendTestEmail = exports.testEmailConfiguration = exports.sendInquiryNotification = exports.getEmailConfig = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const getEmailConfig = () => {
     const config = {
-        host: process.env.EMAIL_HOST || 'mail.southdelhirealty.com',
+        host: process.env.EMAIL_HOST,
         port: parseInt(process.env.EMAIL_PORT || '587'),
         secure: process.env.EMAIL_SECURE === 'true',
-        user: process.env.EMAIL_USER || 'admin@southdelhirealty.com',
-        pass: process.env.EMAIL_PASS || 'Biju@123',
-        from: process.env.EMAIL_FROM || 'admin@southdelhirealty.com'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+        from: process.env.EMAIL_FROM
     };
+    const missingVars = [];
+    if (!config.host)
+        missingVars.push('EMAIL_HOST');
+    if (!config.user)
+        missingVars.push('EMAIL_USER');
+    if (!config.pass)
+        missingVars.push('EMAIL_PASS');
+    if (!config.from)
+        missingVars.push('EMAIL_FROM');
+    if (missingVars.length > 0) {
+        console.error('❌ Missing email configuration variables:', missingVars.join(', '));
+        throw new Error(`Missing email configuration: ${missingVars.join(', ')}`);
+    }
     console.log('🔧 Email Configuration:');
     console.log('   HOST:', config.host);
     console.log('   PORT:', config.port);
@@ -23,8 +36,9 @@ const getEmailConfig = () => {
     console.log('   FROM:', config.from);
     return config;
 };
+exports.getEmailConfig = getEmailConfig;
 const createTransporter = () => {
-    const config = getEmailConfig();
+    const config = (0, exports.getEmailConfig)();
     return nodemailer_1.default.createTransport({
         host: config.host,
         port: config.port,
@@ -33,9 +47,14 @@ const createTransporter = () => {
             user: config.user,
             pass: config.pass
         },
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000,
         tls: {
             rejectUnauthorized: false
-        }
+        },
+        debug: process.env.NODE_ENV === 'development',
+        logger: process.env.NODE_ENV === 'development'
     });
 };
 const generateInquiryEmailHTML = (inquiry, property) => {
@@ -198,7 +217,7 @@ const sendInquiryNotification = async (inquiry, property) => {
     try {
         console.log('📧 Starting email notification process...');
         const transporter = createTransporter();
-        const config = getEmailConfig();
+        const config = (0, exports.getEmailConfig)();
         console.log('🔍 Verifying email transporter...');
         await transporter.verify();
         console.log('✅ Email transporter verified successfully');
@@ -275,7 +294,7 @@ exports.testEmailConfiguration = testEmailConfiguration;
 const sendTestEmail = async () => {
     try {
         const transporter = createTransporter();
-        const config = getEmailConfig();
+        const config = (0, exports.getEmailConfig)();
         const testInquiry = {
             id: 0,
             propertyId: null,
@@ -470,7 +489,7 @@ const sendUserConfirmationEmail = async (inquiry, property) => {
         console.log('📧 Starting user confirmation email process...');
         console.log('👤 Sending confirmation to:', inquiry.email);
         const transporter = createTransporter();
-        const config = getEmailConfig();
+        const config = (0, exports.getEmailConfig)();
         console.log('🔍 Verifying email transporter for user confirmation...');
         await transporter.verify();
         console.log('✅ Email transporter verified for user confirmation');

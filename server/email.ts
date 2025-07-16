@@ -12,18 +12,30 @@ interface EmailConfig {
 }
 
 // Get email configuration from environment variables
-const getEmailConfig = (): EmailConfig => {
+export const getEmailConfig = (): EmailConfig => {
   const config = {
     host: process.env.EMAIL_HOST,
     // Port 587 is the standard submission port (recommended for authenticated SMTP)
     // Port 25 is often blocked by hosting providers
     // Port 465 is for SSL/TLS (set secure: true if using this)
-    port: parseInt(process.env.EMAIL_PORT),
+    port: parseInt(process.env.EMAIL_PORT || '587'),
     secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for 587/25
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
     from: process.env.EMAIL_FROM
   };
+
+  // Validate configuration
+  const missingVars = [];
+  if (!config.host) missingVars.push('EMAIL_HOST');
+  if (!config.user) missingVars.push('EMAIL_USER');
+  if (!config.pass) missingVars.push('EMAIL_PASS');
+  if (!config.from) missingVars.push('EMAIL_FROM');
+  
+  if (missingVars.length > 0) {
+    console.error('❌ Missing email configuration variables:', missingVars.join(', '));
+    throw new Error(`Missing email configuration: ${missingVars.join(', ')}`);
+  }
 
   // Log configuration status (without sensitive data)
   console.log('🔧 Email Configuration:');
@@ -50,9 +62,14 @@ const createTransporter = () => {
       pass: config.pass
     },
     // Additional configuration for better compatibility
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000, // 30 seconds
+    socketTimeout: 60000, // 60 seconds
     tls: {
       rejectUnauthorized: false
-    }
+    },
+    debug: process.env.NODE_ENV === 'development', // Enable debug in development
+    logger: process.env.NODE_ENV === 'development' // Enable logging in development
   });
 };
 
@@ -593,4 +610,4 @@ export const sendUserConfirmationEmail = async (inquiry: Inquiry, property?: Pro
     // Don't throw the error to prevent inquiry submission from failing
     console.warn('⚠️  User confirmation email failed but inquiry was saved');
   }
-}; 
+};

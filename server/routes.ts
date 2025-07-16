@@ -410,14 +410,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Send email notification with property details
-      if (property) {
-        await sendInquiryNotification(inquiry, property);
-        console.log('✅ Email notification processed');
-        
-        // Send confirmation email to the user
-        await sendUserConfirmationEmail(inquiry, property);
-      }
+      // Send email notification with property details (works for both property-specific and general inquiries)
+      console.log('📧 Sending admin notification email...');
+      await sendInquiryNotification(inquiry, property);
+      console.log('✅ Admin notification email processed');
+      
+      // Send confirmation email to the user
+      console.log('📧 Sending user confirmation email...');
+      await sendUserConfirmationEmail(inquiry, property);
       console.log('✅ User confirmation email processed');
       
       const response = inquiry;
@@ -1293,6 +1293,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ Test email send error:', error);
       next(error);
+    }
+  });
+
+  // Test email endpoint
+  app.post('/api/test-email', async (req, res) => {
+    try {
+      console.log('🧪 Testing email configuration...');
+      
+      // Test inquiry data
+      const testInquiry = {
+        name: 'Test User',
+        email: 'test@example.com',
+        phone: '+91 9999999999',
+        subject: 'Test Email',
+        message: 'This is a test email to verify the email configuration.',
+        propertyId: null as number | null
+      };
+      
+      // Create inquiry in database
+      const inquiry = await storage.createInquiry(testInquiry);
+      console.log('✅ Test inquiry created:', inquiry.id);
+      
+      // Test email notifications
+      console.log('📧 Testing admin notification email...');
+      await sendInquiryNotification(inquiry);
+      console.log('✅ Admin notification email sent');
+      
+      console.log('📧 Testing user confirmation email...');
+      await sendUserConfirmationEmail(inquiry);
+      console.log('✅ User confirmation email sent');
+      
+      res.json({ 
+        success: true, 
+        message: 'Email test completed successfully',
+        inquiryId: inquiry.id
+      });
+    } catch (error) {
+      console.error('❌ Email test failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   });
 

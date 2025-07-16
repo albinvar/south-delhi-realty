@@ -194,11 +194,11 @@ async function startServer() {
       name: 'southdelhi.session',
       proxy: true, // Trust the reverse proxy
       cookie: {
-        secure: false, // Set to false for now - will be handled by reverse proxy
+        secure: false, // Set to false for HTTP behind reverse proxy
         sameSite: 'lax' as const, // Use 'lax' for better compatibility
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         httpOnly: true,
-        domain: process.env.NODE_ENV === 'production' ? '.southdelhirealty.com' : undefined
+        domain: undefined // Remove domain restriction for now
       }
     };
 
@@ -226,10 +226,16 @@ async function startServer() {
           method: req.method,
           sessionID: req.sessionID,
           sessionExists: !!req.session,
+          sessionData: req.session ? {
+            passport: req.session.passport,
+            cookie: req.session.cookie
+          } : null,
           isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
           user: req.user ? { id: req.user.id, username: req.user.username } : null,
-          cookies: req.headers.cookie ? 'present' : 'missing',
-          userAgent: req.headers['user-agent'] ? 'present' : 'missing'
+          cookies: req.headers.cookie ? req.headers.cookie.substring(0, 100) + '...' : 'missing',
+          userAgent: req.headers['user-agent'] ? 'present' : 'missing',
+          origin: req.headers.origin || 'not-set',
+          referer: req.headers.referer || 'not-set'
         });
       }
       next();

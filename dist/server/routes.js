@@ -365,11 +365,11 @@ async function registerRoutes(app) {
                     console.warn('⚠️  Failed to fetch property details:', propError);
                 }
             }
-            if (property) {
-                await (0, email_1.sendInquiryNotification)(inquiry, property);
-                console.log('✅ Email notification processed');
-                await (0, email_1.sendUserConfirmationEmail)(inquiry, property);
-            }
+            console.log('📧 Sending admin notification email...');
+            await (0, email_1.sendInquiryNotification)(inquiry, property);
+            console.log('✅ Admin notification email processed');
+            console.log('📧 Sending user confirmation email...');
+            await (0, email_1.sendUserConfirmationEmail)(inquiry, property);
             console.log('✅ User confirmation email processed');
             const response = inquiry;
             console.log('✅ Inquiry submission completed:', response);
@@ -1101,6 +1101,39 @@ async function registerRoutes(app) {
         catch (error) {
             console.error('❌ Test email send error:', error);
             next(error);
+        }
+    });
+    app.post('/api/test-email', async (req, res) => {
+        try {
+            console.log('🧪 Testing email configuration...');
+            const testInquiry = {
+                name: 'Test User',
+                email: 'test@example.com',
+                phone: '+91 9999999999',
+                subject: 'Test Email',
+                message: 'This is a test email to verify the email configuration.',
+                propertyId: null
+            };
+            const inquiry = await storage_1.storage.createInquiry(testInquiry);
+            console.log('✅ Test inquiry created:', inquiry.id);
+            console.log('📧 Testing admin notification email...');
+            await (0, email_1.sendInquiryNotification)(inquiry);
+            console.log('✅ Admin notification email sent');
+            console.log('📧 Testing user confirmation email...');
+            await (0, email_1.sendUserConfirmationEmail)(inquiry);
+            console.log('✅ User confirmation email sent');
+            res.json({
+                success: true,
+                message: 'Email test completed successfully',
+                inquiryId: inquiry.id
+            });
+        }
+        catch (error) {
+            console.error('❌ Email test failed:', error);
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
         }
     });
     app.post("/api/webhooks/cloudinary", async (req, res) => {
