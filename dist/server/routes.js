@@ -83,9 +83,20 @@ async function registerRoutes(app) {
     const appTyped = app;
     app.use('/api/auth', auth_1.default);
     const ensureAuthenticated = (req, res, next) => {
+        console.log('🔍 Authentication check:', {
+            isAuthenticated: req.isAuthenticated(),
+            user: req.user ? { id: req.user.id, username: req.user.username, role: req.user.role } : null,
+            sessionID: req.sessionID,
+            session: req.session ? 'exists' : 'missing'
+        });
         if (req.isAuthenticated()) {
+            console.log('✅ User authenticated:', { id: req.user.id, username: req.user.username });
             return next();
         }
+        console.log('❌ User not authenticated, session details:', {
+            sessionID: req.sessionID,
+            passport: req.session?.passport
+        });
         res.status(401).json({ message: "Unauthorized" });
     };
     const ensureAdmin = (req, res, next) => {

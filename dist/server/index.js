@@ -187,17 +187,40 @@ async function startServer() {
             name: 'southdelhi.session',
             proxy: true,
             cookie: {
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax'),
+                secure: false,
+                sameSite: 'lax',
                 maxAge: 24 * 60 * 60 * 1000,
                 httpOnly: true,
+                domain: process.env.NODE_ENV === 'production' ? '.southdelhirealty.com' : undefined
             }
         };
         if (process.env.NODE_ENV === 'production' && process.env.SSL_ENABLED === 'true') {
             sessionConfig.cookie.secure = true;
-            sessionConfig.cookie.sameSite = 'lax';
         }
+        console.log('📋 Session configuration:', {
+            secure: sessionConfig.cookie?.secure,
+            sameSite: sessionConfig.cookie?.sameSite,
+            domain: sessionConfig.cookie?.domain,
+            maxAge: sessionConfig.cookie?.maxAge,
+            httpOnly: sessionConfig.cookie?.httpOnly,
+            proxy: sessionConfig.proxy
+        });
         app.use((0, express_session_1.default)(sessionConfig));
+        app.use((req, res, next) => {
+            if (req.path.startsWith('/api/')) {
+                console.log('📊 Session Debug:', {
+                    path: req.path,
+                    method: req.method,
+                    sessionID: req.sessionID,
+                    sessionExists: !!req.session,
+                    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+                    user: req.user ? { id: req.user.id, username: req.user.username } : null,
+                    cookies: req.headers.cookie ? 'present' : 'missing',
+                    userAgent: req.headers['user-agent'] ? 'present' : 'missing'
+                });
+            }
+            next();
+        });
         app.use(passport_1.default.initialize());
         app.use(passport_1.default.session());
         app.get('/health', async (req, res) => {

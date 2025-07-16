@@ -178,13 +178,15 @@ passport.use(
   )
 );
 
-// Passport session setup
+// Passport session setup with enhanced logging
 passport.serializeUser((user: any, done: (err: any, id?: any) => void) => {
+  console.log('🔄 Serializing user:', { id: user.id, username: user.username, role: user.role });
   done(null, user.id);
 });
 
 passport.deserializeUser(async (id: number, done: (err: any, user?: any) => void) => {
   try {
+    console.log('🔄 Deserializing user with ID:', id);
     const user = await storage.findUserById(id);
     if (user) {
       const userWithoutPassword: AuthUser = {
@@ -193,11 +195,14 @@ passport.deserializeUser(async (id: number, done: (err: any, user?: any) => void
         email: user.email,
         role: user.role
       };
+      console.log('✅ User deserialized successfully:', { id: user.id, username: user.username, role: user.role });
       return done(null, userWithoutPassword);
     } else {
+      console.warn('⚠️  User not found during deserialization for ID:', id);
       return done(null, null);
     }
   } catch (error) {
+    console.error('❌ Error during user deserialization:', error);
     return done(error);
   }
 });
@@ -284,11 +289,21 @@ router.post('/logout', (req, res, next) => {
   });
 });
 
-// Check if user is authenticated
+// Check if user is authenticated with enhanced debugging
 router.get('/status', (req, res) => {
+  console.log('🔍 Auth status check:', {
+    isAuthenticated: req.isAuthenticated(),
+    user: req.user ? { id: (req.user as any).id, username: (req.user as any).username, role: (req.user as any).role } : null,
+    sessionID: req.sessionID,
+    session: req.session ? 'exists' : 'missing',
+    passport: (req.session as any)?.passport
+  });
+  
   if (req.isAuthenticated()) {
+    console.log('✅ User authenticated via status endpoint');
     res.json(req.user);
   } else {
+    console.log('❌ User not authenticated via status endpoint');
     res.status(401).json({ message: 'Not authenticated' });
   }
 });

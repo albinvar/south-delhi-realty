@@ -157,10 +157,12 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
     }
 }));
 passport_1.default.serializeUser((user, done) => {
+    console.log('🔄 Serializing user:', { id: user.id, username: user.username, role: user.role });
     done(null, user.id);
 });
 passport_1.default.deserializeUser(async (id, done) => {
     try {
+        console.log('🔄 Deserializing user with ID:', id);
         const user = await storage_1.storage.findUserById(id);
         if (user) {
             const userWithoutPassword = {
@@ -169,13 +171,16 @@ passport_1.default.deserializeUser(async (id, done) => {
                 email: user.email,
                 role: user.role
             };
+            console.log('✅ User deserialized successfully:', { id: user.id, username: user.username, role: user.role });
             return done(null, userWithoutPassword);
         }
         else {
+            console.warn('⚠️  User not found during deserialization for ID:', id);
             return done(null, null);
         }
     }
     catch (error) {
+        console.error('❌ Error during user deserialization:', error);
         return done(error);
     }
 });
@@ -191,15 +196,46 @@ function ensureSuperAdmin(req, res, next) {
 router.post('/login', (req, res, next) => {
     passport_1.default.authenticate('local', (err, user, info) => {
         if (err) {
-            return next(err);
+            console.error('🚨 Authentication error:', err);
+            if (err.code === 'ETIMEDOUT' || err.message.includes('ETIMEDOUT')) {
+                console.error('❌ Database connection timeout during login');
+                return res.status(500).json({
+                    message: 'Database connection timeout. Please try again in a few moments.',
+                    error: 'DATABASE_TIMEOUT'
+                });
+            }
+            if (err.code === 'ECONNREFUSED' || err.message.includes('ECONNREFUSED')) {
+                console.error('❌ Database connection refused during login');
+                return res.status(500).json({
+                    message: 'Database connection error. Please try again later.',
+                    error: 'DATABASE_CONNECTION_ERROR'
+                });
+            }
+            if (err.message.includes('Failed query') || err.name === 'DrizzleQueryError') {
+                console.error('❌ Database query error during login');
+                return res.status(500).json({
+                    message: 'Database error. Please try again later.',
+                    error: 'DATABASE_ERROR'
+                });
+            }
+            return res.status(500).json({
+                message: 'An unexpected error occurred. Please try again.',
+                error: 'AUTHENTICATION_ERROR'
+            });
         }
         if (!user) {
+            console.warn('⚠️  Login failed - invalid credentials:', info);
             return res.status(401).json(info);
         }
         req.logIn(user, (err) => {
             if (err) {
-                return next(err);
+                console.error('🚨 Session creation error:', err);
+                return res.status(500).json({
+                    message: 'Failed to create session. Please try again.',
+                    error: 'SESSION_ERROR'
+                });
             }
+            console.log('✅ Login successful for user:', user.username);
             return res.json(user);
         });
     })(req, res, next);
@@ -213,10 +249,19 @@ router.post('/logout', (req, res, next) => {
     });
 });
 router.get('/status', (req, res) => {
+    console.log('🔍 Auth status check:', {
+        isAuthenticated: req.isAuthenticated(),
+        user: req.user ? { id: req.user.id, username: req.user.username, role: req.user.role } : null,
+        sessionID: req.sessionID,
+        session: req.session ? 'exists' : 'missing',
+        passport: req.session?.passport
+    });
     if (req.isAuthenticated()) {
+        console.log('✅ User authenticated via status endpoint');
         res.json(req.user);
     }
     else {
+        console.log('❌ User not authenticated via status endpoint');
         res.status(401).json({ message: 'Not authenticated' });
     }
 });
@@ -239,7 +284,19 @@ router.get('/google/callback', (req, res, next) => {
     }, (err, user, info) => {
         if (err) {
             console.error('❌ Google OAuth error:', err);
-            return next(err);
+            if (err.code === 'ETIMEDOUT' || err.message.includes('ETIMEDOUT')) {
+                console.error('❌ Database connection timeout during Google OAuth');
+                return res.redirect('/auth?error=database_timeout');
+            }
+            if (err.code === 'ECONNREFUSED' || err.message.includes('ECONNREFUSED')) {
+                console.error('❌ Database connection refused during Google OAuth');
+                return res.redirect('/auth?error=database_connection_error');
+            }
+            if (err.name === 'InternalOAuthError' && err.oauthError?.code === 'ETIMEDOUT') {
+                console.error('❌ OAuth provider timeout');
+                return res.redirect('/auth?error=oauth_timeout');
+            }
+            return res.redirect('/auth?error=system_error');
         }
         if (!user) {
             console.error('❌ Google OAuth failed:', info);
@@ -256,7 +313,10 @@ router.get('/google/callback', (req, res, next) => {
         req.logIn(user, (loginErr) => {
             if (loginErr) {
                 console.error('❌ Login error:', loginErr);
-                return next(loginErr);
+                if (loginErr.code === 'ETIMEDOUT' || loginErr.message.includes('ETIMEDOUT')) {
+                    return res.redirect('/auth?error=session_timeout');
+                }
+                return res.redirect('/auth?error=session_error');
             }
             console.log('✅ Google OAuth successful for user:', user.email);
             res.redirect('/admin');

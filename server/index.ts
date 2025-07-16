@@ -185,7 +185,7 @@ async function startServer() {
       }
     }
 
-    // Configure session middleware
+    // Configure session middleware with improved production settings
     const sessionConfig: session.SessionOptions = {
       secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
       resave: false,
@@ -194,20 +194,46 @@ async function startServer() {
       name: 'southdelhi.session',
       proxy: true, // Trust the reverse proxy
       cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax' | 'strict' | boolean,
+        secure: false, // Set to false for now - will be handled by reverse proxy
+        sameSite: 'lax' as const, // Use 'lax' for better compatibility
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         httpOnly: true,
+        domain: process.env.NODE_ENV === 'production' ? '.southdelhirealty.com' : undefined
       }
     };
 
-    // Adjust cookie settings based on environment
+    // Only set secure cookies if explicitly enabled
     if (process.env.NODE_ENV === 'production' && process.env.SSL_ENABLED === 'true') {
       sessionConfig.cookie!.secure = true;
-      sessionConfig.cookie!.sameSite = 'lax' as const; // Keep as 'lax' for OAuth
     }
 
+    console.log('📋 Session configuration:', {
+      secure: sessionConfig.cookie?.secure,
+      sameSite: sessionConfig.cookie?.sameSite,
+      domain: sessionConfig.cookie?.domain,
+      maxAge: sessionConfig.cookie?.maxAge,
+      httpOnly: sessionConfig.cookie?.httpOnly,
+      proxy: sessionConfig.proxy
+    });
+
     app.use(session(sessionConfig) as any);
+
+    // Add session debugging middleware
+    app.use((req: any, res: any, next: any) => {
+      if (req.path.startsWith('/api/')) {
+        console.log('📊 Session Debug:', {
+          path: req.path,
+          method: req.method,
+          sessionID: req.sessionID,
+          sessionExists: !!req.session,
+          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+          user: req.user ? { id: req.user.id, username: req.user.username } : null,
+          cookies: req.headers.cookie ? 'present' : 'missing',
+          userAgent: req.headers['user-agent'] ? 'present' : 'missing'
+        });
+      }
+      next();
+    });
 
     // Initialize passport and session
     app.use(passport.initialize() as any);

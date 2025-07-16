@@ -70,11 +70,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   app.use('/api/auth', authRouter);
 
-  // Middleware to check authentication
+  // Middleware to check authentication with enhanced debugging
   const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+    console.log('🔍 Authentication check:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: (req.user as any).id, username: (req.user as any).username, role: (req.user as any).role } : null,
+      sessionID: req.sessionID,
+      session: req.session ? 'exists' : 'missing'
+    });
+    
     if (req.isAuthenticated()) {
+      console.log('✅ User authenticated:', { id: (req.user as any).id, username: (req.user as any).username });
       return next();
     }
+    
+    console.log('❌ User not authenticated, session details:', {
+      sessionID: req.sessionID,
+      passport: (req.session as any)?.passport
+    });
+    
     res.status(401).json({ message: "Unauthorized" });
   };
 

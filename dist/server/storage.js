@@ -20,12 +20,14 @@ const sessionStore = new MemoryStore({
     },
     noDisposeOnSet: true
 });
-async function withRetry(operation, maxRetries = 3, baseDelay = 1000, operationName = 'database operation') {
+async function withRetry(operation, maxRetries = 5, baseDelay = 2000, operationName = 'database operation') {
     let lastError;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`🔄 Executing ${operationName} (attempt ${attempt}/${maxRetries})`);
-            const result = await operation();
+            const result = await Promise.race([
+                operation(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`${operationName} timeout after 30 seconds`)), 30000))
+            ]);
             if (attempt > 1) {
                 console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
             }
@@ -36,16 +38,31 @@ async function withRetry(operation, maxRetries = 3, baseDelay = 1000, operationN
             console.error(`❌ ${operationName} failed on attempt ${attempt}:`, {
                 message: error.message,
                 code: error.code,
-                errno: error.errno
+                errno: error.errno,
+                sqlState: error.sqlState
             });
-            if (error.code !== 'ETIMEDOUT' && error.code !== 'ECONNRESET' && error.code !== 'ECONNREFUSED') {
+            const retryableErrors = [
+                'ETIMEDOUT',
+                'ECONNRESET',
+                'ECONNREFUSED',
+                'ENOTFOUND',
+                'EPIPE',
+                'ECONNABORTED'
+            ];
+            if (!retryableErrors.includes(error.code) && !error.message.includes('timeout')) {
+                console.error(`🚫 Non-retryable error for ${operationName}:`, error.code);
                 throw error;
             }
             if (attempt === maxRetries) {
                 console.error(`💥 ${operationName} failed after ${maxRetries} attempts`);
+                console.error(`🔧 Final error details:`, {
+                    message: error.message,
+                    code: error.code,
+                    sqlState: error.sqlState
+                });
                 throw new Error(`${operationName} failed after ${maxRetries} attempts: ${error.message}`);
             }
-            const delay = baseDelay * Math.pow(1.5, attempt - 1);
+            const delay = Math.min(baseDelay * Math.pow(1.5, attempt - 1), 10000);
             console.log(`⏳ Waiting ${delay}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }

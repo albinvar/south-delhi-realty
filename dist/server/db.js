@@ -47,21 +47,24 @@ const connectionConfig = process.env.DATABASE_URL
     ? {
         uri: process.env.DATABASE_URL,
         waitForConnections: true,
-        connectionLimit: 10,
+        connectionLimit: 15,
         queueLimit: 0,
-        acquireTimeout: 10000,
-        timeout: 15000,
+        acquireTimeout: 15000,
+        timeout: 30000,
         reconnect: true,
         keepAliveInitialDelay: 0,
         enableKeepAlive: true,
-        connectTimeout: 20000,
+        connectTimeout: 30000,
         supportBigNumbers: true,
         bigNumberStrings: true,
         dateStrings: false,
         debug: false,
         trace: false,
         multipleStatements: false,
-        charset: 'utf8mb4'
+        charset: 'utf8mb4',
+        idleTimeout: 300000,
+        maxReconnects: 10,
+        reconnectDelay: 2000,
     }
     : {
         host: process.env.DB_HOST || "localhost",
@@ -70,21 +73,24 @@ const connectionConfig = process.env.DATABASE_URL
         database: process.env.DB_NAME || "southdelhirealestate",
         port: parseInt(process.env.DB_PORT || "3306"),
         waitForConnections: true,
-        connectionLimit: 10,
+        connectionLimit: 15,
         queueLimit: 0,
-        acquireTimeout: 10000,
-        timeout: 15000,
+        acquireTimeout: 15000,
+        timeout: 30000,
         reconnect: true,
         keepAliveInitialDelay: 0,
         enableKeepAlive: true,
-        connectTimeout: 20000,
+        connectTimeout: 30000,
         supportBigNumbers: true,
         bigNumberStrings: true,
         dateStrings: false,
         debug: false,
         trace: false,
         multipleStatements: false,
-        charset: 'utf8mb4'
+        charset: 'utf8mb4',
+        idleTimeout: 300000,
+        maxReconnects: 10,
+        reconnectDelay: 2000,
     };
 if (process.env.NODE_ENV === 'production' && process.env.DB_SSL_ENABLED === 'true') {
     connectionConfig.ssl = {
@@ -93,21 +99,28 @@ if (process.env.NODE_ENV === 'production' && process.env.DB_SSL_ENABLED === 'tru
 }
 const connection = mysql.createPool(connectionConfig);
 exports.db = (0, mysql2_1.drizzle)(connection, { schema, mode: "default" });
-async function testDatabaseConnection(retries = 3, delay = 2000) {
+async function testDatabaseConnection(retries = 5, delay = 3000) {
     for (let i = 0; i < retries; i++) {
         try {
             console.log(`🔄 Testing database connection (attempt ${i + 1}/${retries})...`);
-            const conn = await connection.getConnection();
-            await conn.execute('SELECT 1 as test');
+            const conn = await Promise.race([
+                connection.getConnection(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 30 seconds')), 30000))
+            ]);
+            await Promise.race([
+                conn.execute('SELECT 1 as test, NOW() as current_time'),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000))
+            ]);
             console.log('✅ Database connection test successful');
             console.log('📊 Database connection info:', {
-                host: process.env.DB_HOST,
-                user: process.env.DB_USER,
-                database: process.env.DB_NAME,
-                port: process.env.DB_PORT,
+                host: process.env.DB_HOST || 'DATABASE_URL',
+                user: process.env.DB_USER || 'from_url',
+                database: process.env.DB_NAME || 'from_url',
+                port: process.env.DB_PORT || 'from_url',
                 timeout: connectionConfig.timeout,
                 acquireTimeout: connectionConfig.acquireTimeout,
-                connectTimeout: connectionConfig.connectTimeout
+                connectTimeout: connectionConfig.connectTimeout,
+                environment: process.env.NODE_ENV || 'development'
             });
             conn.release();
             return;
@@ -117,14 +130,23 @@ async function testDatabaseConnection(retries = 3, delay = 2000) {
                 message: error.message,
                 code: error.code,
                 errno: error.errno,
-                sqlState: error.sqlState
+                sqlState: error.sqlState,
+                attempt: i + 1,
+                totalRetries: retries
             });
             if (i === retries - 1) {
+                console.error('🚨 CRITICAL: Database connection failed after all retry attempts');
+                console.error('🔧 Troubleshooting steps:');
+                console.error('   1. Check if database server is running');
+                console.error('   2. Verify database credentials in environment variables');
+                console.error('   3. Check network connectivity to database server');
+                console.error('   4. Verify firewall settings');
+                console.error('   5. Check if database server is overloaded');
                 throw new Error(`Failed to connect to database after ${retries} attempts: ${error.message}`);
             }
             console.log(`⏳ Waiting ${delay}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 1.5;
+            delay = Math.min(delay * 1.5, 10000);
         }
     }
 }
