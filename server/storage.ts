@@ -37,6 +37,50 @@ const sessionStore = new MemoryStore({
   noDisposeOnSet: true
 });
 
+// Database retry wrapper function with exponential backoff
+async function withRetry<T>(
+  operation: () => Promise<T>, 
+  maxRetries = 3, 
+  baseDelay = 1000,
+  operationName = 'database operation'
+): Promise<T> {
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Executing ${operationName} (attempt ${attempt}/${maxRetries})`);
+      const result = await operation();
+      if (attempt > 1) {
+        console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
+      }
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      console.error(`❌ ${operationName} failed on attempt ${attempt}:`, {
+        message: error.message,
+        code: error.code,
+        errno: error.errno
+      });
+      
+      // Don't retry for non-timeout errors
+      if (error.code !== 'ETIMEDOUT' && error.code !== 'ECONNRESET' && error.code !== 'ECONNREFUSED') {
+        throw error;
+      }
+      
+      if (attempt === maxRetries) {
+        console.error(`💥 ${operationName} failed after ${maxRetries} attempts`);
+        throw new Error(`${operationName} failed after ${maxRetries} attempts: ${error.message}`);
+      }
+      
+      const delay = baseDelay * Math.pow(1.5, attempt - 1);
+      console.log(`⏳ Waiting ${delay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError!;
+}
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -132,18 +176,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async findUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    return withRetry(async () => {
+      const [user] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      return user;
+    }, 3, 1000, `findUserByUsername(${username})`);
   }
 
   async findUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    return withRetry(async () => {
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      return user;
+    }, 3, 1000, `findUserByEmail(${email})`);
   }
 
   async findUserByGoogleId(googleId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
-    return user;
+    return withRetry(async () => {
+      const [user] = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
+      return user;
+    }, 3, 1000, `findUserByGoogleId(${googleId})`);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
@@ -300,170 +350,172 @@ export class DatabaseStorage implements IStorage {
     facing?: string | "all";
     search?: string;
   }): Promise<{ properties: PropertyWithRelations[]; total: number; }> {
-    let query = db.select({
-      id: properties.id,
-      title: properties.title,
-      slug: properties.slug,
-      description: properties.description,
-      status: properties.status,
-      category: properties.category,
-      propertyType: properties.propertyType,
-      subType: properties.subType,
-      portion: properties.portion,
-      area: properties.area,
-      areaUnit: properties.areaUnit,
-      furnishedStatus: properties.furnishedStatus,
-      bedrooms: properties.bedrooms,
-      bathrooms: properties.bathrooms,
-      balconies: properties.balconies,
-      facing: properties.facing,
-      parking: properties.parking,
-      age: properties.age,
-      price: properties.price,
-      priceNegotiable: properties.priceNegotiable,
-      brokerage: properties.brokerage,
-      contactDetails: properties.contactDetails,
-      latitude: properties.latitude,
-      longitude: properties.longitude,
-      isActive: properties.isActive,
-      createdAt: properties.createdAt,
-      updatedAt: properties.updatedAt,
-    }).from(properties);
+    return withRetry(async () => {
+      let query = db.select({
+        id: properties.id,
+        title: properties.title,
+        slug: properties.slug,
+        description: properties.description,
+        status: properties.status,
+        category: properties.category,
+        propertyType: properties.propertyType,
+        subType: properties.subType,
+        portion: properties.portion,
+        area: properties.area,
+        areaUnit: properties.areaUnit,
+        furnishedStatus: properties.furnishedStatus,
+        bedrooms: properties.bedrooms,
+        bathrooms: properties.bathrooms,
+        balconies: properties.balconies,
+        facing: properties.facing,
+        parking: properties.parking,
+        age: properties.age,
+        price: properties.price,
+        priceNegotiable: properties.priceNegotiable,
+        brokerage: properties.brokerage,
+        contactDetails: properties.contactDetails,
+        latitude: properties.latitude,
+        longitude: properties.longitude,
+        isActive: properties.isActive,
+        createdAt: properties.createdAt,
+        updatedAt: properties.updatedAt,
+      }).from(properties);
 
-    let countQuery = db.select({ count: sql`count(*)` }).from(properties);
+      let countQuery = db.select({ count: sql`count(*)` }).from(properties);
 
-    console.log("Enhanced pagination filters received:", filters);
-    
-    const conditions = [];
-    
-    // Always filter by active status
-    conditions.push(eq(properties.isActive, true));
-    
-    // Status filter (sale/rent)
-    if (filters?.status && (filters.status as any) !== 'all') {
-      if (filters.status === 'sale' || filters.status === 'rent') {
-        conditions.push(eq(properties.status, filters.status));
-      }
-    }
-    
-    // Category filter (residential/commercial)
-    if (filters?.category && (filters.category as any) !== 'all') {
-      if (filters.category === 'residential' || filters.category === 'commercial') {
-        conditions.push(eq(properties.category, filters.category));
-      }
-    }
-    
-    // Property type filter
-    if (filters?.propertyType && (filters.propertyType as any) !== 'all') {
-      if (['apartment', 'independent-house', 'villa', 'farm-house', 'shop', 'basement'].includes(filters.propertyType)) {
-        conditions.push(eq(properties.propertyType, filters.propertyType as any));
-      }
-    }
-    
-    // Sub type filter
-    if (filters?.subType && (filters.subType as any) !== 'all') {
-      if (['1rk', '1bhk', '2bhk', '3bhk', '4bhk', 'plot', 'other'].includes(filters.subType)) {
-        conditions.push(eq(properties.subType, filters.subType as any));
-      }
-    }
-    
-    // Price range filters
-    if (filters?.minPrice && filters.minPrice > 0) {
-      conditions.push(gte(properties.price, filters.minPrice));
-    }
-    if (filters?.maxPrice && filters.maxPrice > 0) {
-      conditions.push(lte(properties.price, filters.maxPrice));
-    }
-    
-    // Area range filters
-    if (filters?.minArea && filters.minArea > 0) {
-      conditions.push(gte(properties.area, filters.minArea));
-    }
-    if (filters?.maxArea && filters.maxArea > 0) {
-      conditions.push(lte(properties.area, filters.maxArea));
-    }
-    
-    // Bedrooms filter
-    if (filters?.bedrooms && filters.bedrooms > 0) {
-      conditions.push(eq(properties.bedrooms, filters.bedrooms));
-    }
-    
-    // Bathrooms filter
-    if (filters?.bathrooms && filters.bathrooms > 0) {
-      conditions.push(eq(properties.bathrooms, filters.bathrooms));
-    }
-    
-    // Furnished status filter
-    if (filters?.furnishedStatus && (filters.furnishedStatus as any) !== 'all') {
-      if (['furnished', 'semi-furnished', 'unfurnished'].includes(filters.furnishedStatus)) {
-        conditions.push(eq(properties.furnishedStatus, filters.furnishedStatus as any));
-      }
-    }
-    
-    // Parking filter
-    if (filters?.parking && (filters.parking as any) !== 'all') {
-      if (['car', 'two-wheeler', 'both', 'none'].includes(filters.parking)) {
-        conditions.push(eq(properties.parking, filters.parking as any));
-      }
-    }
-    
-    // Facing filter
-    if (filters?.facing && (filters.facing as any) !== 'all') {
-      if (['east', 'west', 'north', 'south', 'road', 'park', 'greenery'].includes(filters.facing)) {
-        conditions.push(eq(properties.facing, filters.facing as any));
-      }
-    }
-    
-    // Search filter (title, description)
-    if (filters?.search && filters.search.trim()) {
-      const searchTerm = `%${filters.search.trim()}%`;
-      conditions.push(
-        sql`(${properties.title} LIKE ${searchTerm} OR ${properties.description} LIKE ${searchTerm})`
-      );
-    }
-    
-    // Apply all conditions
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-      countQuery = countQuery.where(and(...conditions)) as any;
-    }
-    
-    // First get the total count
-    const [countResult] = await countQuery;
-    const total = Number(countResult.count);
-    
-    // Default sort by created date descending
-    query = query.orderBy(desc(properties.createdAt)) as typeof query;
-    
-    // Apply pagination
-    const page = filters?.page || 1;
-    const limit = filters?.limit || 9;
-    const offset = (page - 1) * limit;
-    
-    query = query.limit(limit).offset(offset) as typeof query;
-    
-    // Execute the paginated query
-    const propertyList = await query as Property[];
-    console.log(`Found ${propertyList.length} properties out of ${total} total after enhanced filtering`);
-    
-    // Fetch media for all properties
-    const propertiesWithMedia: PropertyWithRelations[] = [];
-    
-    for (const property of propertyList) {
-      const propertyMediaItems = await db.select().from(propertyMedia)
-        .where(eq(propertyMedia.propertyId, property.id))
-        .orderBy(propertyMedia.orderIndex);
+      console.log("Enhanced pagination filters received:", filters);
       
-      propertiesWithMedia.push({
-        ...property,
-        media: propertyMediaItems
-      });
-    }
-    
-    return {
-      properties: propertiesWithMedia,
-      total
-    };
+      const conditions = [];
+      
+      // Always filter by active status
+      conditions.push(eq(properties.isActive, true));
+      
+      // Status filter (sale/rent)
+      if (filters?.status && (filters.status as any) !== 'all') {
+        if (filters.status === 'sale' || filters.status === 'rent') {
+          conditions.push(eq(properties.status, filters.status));
+        }
+      }
+      
+      // Category filter (residential/commercial)
+      if (filters?.category && (filters.category as any) !== 'all') {
+        if (filters.category === 'residential' || filters.category === 'commercial') {
+          conditions.push(eq(properties.category, filters.category));
+        }
+      }
+      
+      // Property type filter
+      if (filters?.propertyType && (filters.propertyType as any) !== 'all') {
+        if (['apartment', 'independent-house', 'villa', 'farm-house', 'shop', 'basement'].includes(filters.propertyType)) {
+          conditions.push(eq(properties.propertyType, filters.propertyType as any));
+        }
+      }
+      
+      // Sub type filter
+      if (filters?.subType && (filters.subType as any) !== 'all') {
+        if (['1rk', '1bhk', '2bhk', '3bhk', '4bhk', 'plot', 'other'].includes(filters.subType)) {
+          conditions.push(eq(properties.subType, filters.subType as any));
+        }
+      }
+      
+      // Price range filters
+      if (filters?.minPrice && filters.minPrice > 0) {
+        conditions.push(gte(properties.price, filters.minPrice));
+      }
+      if (filters?.maxPrice && filters.maxPrice > 0) {
+        conditions.push(lte(properties.price, filters.maxPrice));
+      }
+      
+      // Area range filters
+      if (filters?.minArea && filters.minArea > 0) {
+        conditions.push(gte(properties.area, filters.minArea));
+      }
+      if (filters?.maxArea && filters.maxArea > 0) {
+        conditions.push(lte(properties.area, filters.maxArea));
+      }
+      
+      // Bedrooms filter
+      if (filters?.bedrooms && filters.bedrooms > 0) {
+        conditions.push(eq(properties.bedrooms, filters.bedrooms));
+      }
+      
+      // Bathrooms filter
+      if (filters?.bathrooms && filters.bathrooms > 0) {
+        conditions.push(eq(properties.bathrooms, filters.bathrooms));
+      }
+      
+      // Furnished status filter
+      if (filters?.furnishedStatus && (filters.furnishedStatus as any) !== 'all') {
+        if (['furnished', 'semi-furnished', 'unfurnished'].includes(filters.furnishedStatus)) {
+          conditions.push(eq(properties.furnishedStatus, filters.furnishedStatus as any));
+        }
+      }
+      
+      // Parking filter
+      if (filters?.parking && (filters.parking as any) !== 'all') {
+        if (['car', 'two-wheeler', 'both', 'none'].includes(filters.parking)) {
+          conditions.push(eq(properties.parking, filters.parking as any));
+        }
+      }
+      
+      // Facing filter
+      if (filters?.facing && (filters.facing as any) !== 'all') {
+        if (['east', 'west', 'north', 'south', 'road', 'park', 'greenery'].includes(filters.facing)) {
+          conditions.push(eq(properties.facing, filters.facing as any));
+        }
+      }
+      
+      // Search filter (title, description)
+      if (filters?.search && filters.search.trim()) {
+        const searchTerm = `%${filters.search.trim()}%`;
+        conditions.push(
+          sql`(${properties.title} LIKE ${searchTerm} OR ${properties.description} LIKE ${searchTerm})`
+        );
+      }
+      
+      // Apply all conditions
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+        countQuery = countQuery.where(and(...conditions)) as any;
+      }
+      
+      // First get the total count
+      const [countResult] = await countQuery;
+      const total = Number(countResult.count);
+      
+      // Default sort by created date descending
+      query = query.orderBy(desc(properties.createdAt)) as typeof query;
+      
+      // Apply pagination
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 9;
+      const offset = (page - 1) * limit;
+      
+      query = query.limit(limit).offset(offset) as typeof query;
+      
+      // Execute the paginated query
+      const propertyList = await query as Property[];
+      console.log(`Found ${propertyList.length} properties out of ${total} total after enhanced filtering`);
+      
+      // Fetch media for all properties
+      const propertiesWithMedia: PropertyWithRelations[] = [];
+      
+      for (const property of propertyList) {
+        const propertyMediaItems = await db.select().from(propertyMedia)
+          .where(eq(propertyMedia.propertyId, property.id))
+          .orderBy(propertyMedia.orderIndex);
+        
+        propertiesWithMedia.push({
+          ...property,
+          media: propertyMediaItems
+        });
+      }
+      
+      return {
+        properties: propertiesWithMedia,
+        total
+      };
+    }, 3, 1000, 'getPropertiesWithPagination');
   }
 
   async getPropertyById(id: number): Promise<PropertyWithRelations | undefined> {
@@ -983,25 +1035,27 @@ export class DatabaseStorage implements IStorage {
     propertiesForRent: number;
     newInquiries: number;
   }> {
-    const totalProperties = await db.select({ count: sql`count(*)` }).from(properties);
-    const propertiesForSale = await db.select({ count: sql`count(*)` })
-      .from(properties)
-      .where(eq(properties.status, 'sale'));
-    
-    const propertiesForRent = await db.select({ count: sql`count(*)` })
-      .from(properties)
-      .where(eq(properties.status, 'rent'));
-    
-    const newInquiries = await db.select({ count: sql`count(*)` })
-      .from(inquiries)
-      .where(eq(inquiries.status, 'new'));
-    
-    return {
-      totalProperties: Number(totalProperties[0].count),
-      propertiesForSale: Number(propertiesForSale[0].count),
-      propertiesForRent: Number(propertiesForRent[0].count),
-      newInquiries: Number(newInquiries[0].count)
-    };
+    return withRetry(async () => {
+      const totalProperties = await db.select({ count: sql`count(*)` }).from(properties);
+      const propertiesForSale = await db.select({ count: sql`count(*)` })
+        .from(properties)
+        .where(eq(properties.status, 'sale'));
+      
+      const propertiesForRent = await db.select({ count: sql`count(*)` })
+        .from(properties)
+        .where(eq(properties.status, 'rent'));
+      
+      const newInquiries = await db.select({ count: sql`count(*)` })
+        .from(inquiries)
+        .where(eq(inquiries.status, 'new'));
+      
+      return {
+        totalProperties: Number(totalProperties[0].count),
+        propertiesForSale: Number(propertiesForSale[0].count),
+        propertiesForRent: Number(propertiesForRent[0].count),
+        newInquiries: Number(newInquiries[0].count)
+      };
+    }, 3, 1000, 'getDashboardStats');
   }
 
   // Add this method to the storage object in the export section

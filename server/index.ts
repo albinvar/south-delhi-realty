@@ -10,7 +10,7 @@ import helmet from 'helmet';
 import { createServer } from 'http';
 import morgan from 'morgan';
 import passport from 'passport';
-import { initializeDB } from './db';
+import { closeDatabase, healthCheckDatabase, initializeDB } from './db';
 import { registerRoutes } from "./routes";
 import sitemapRoutes from './sitemap';
 import { storage } from './storage';
@@ -216,24 +216,62 @@ async function startServer() {
     // Health check endpoint (for DigitalOcean and general monitoring)
     app.get('/health', async (req: any, res: any) => {
       try {
-        // Check database connection using our storage layer
-        await storage.getDashboardStats(); // Simple health check
-        res.status(200).json({ status: 'healthy' });
+        // Use the enhanced health check function
+        const isHealthy = await healthCheckDatabase();
+        if (isHealthy) {
+          res.status(200).json({ 
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            environment: process.env.NODE_ENV 
+          });
+        } else {
+          res.status(503).json({ 
+            status: 'unhealthy', 
+            error: 'Database connection failed',
+            timestamp: new Date().toISOString()
+          });
+        }
       } catch (error) {
         logger.error('Health check failed:', error);
-        res.status(503).json({ status: 'unhealthy', error: 'Database connection failed' });
+        res.status(503).json({ 
+          status: 'unhealthy', 
+          error: 'Health check exception',
+          timestamp: new Date().toISOString()
+        });
       }
     });
 
     // Readiness check (for Kubernetes/Docker)
     app.get('/ready', async (req: any, res: any) => {
       try {
-        // Check database connection using our storage layer
-        await storage.getDashboardStats(); // Simple health check
-        res.status(200).json({ status: 'Ready' });
+        // Use the enhanced health check function with timeout
+        const isReady = await Promise.race([
+          healthCheckDatabase(),
+          new Promise<boolean>((resolve) => {
+            setTimeout(() => resolve(false), 3000); // 3 second timeout for readiness
+          })
+        ]);
+        
+        if (isReady) {
+          res.status(200).json({ 
+            status: 'Ready',
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          res.status(503).json({ 
+            status: 'Not Ready', 
+            error: 'Database not ready',
+            timestamp: new Date().toISOString()
+          });
+        }
       } catch (error) {
         logger.error('Readiness check failed:', error);
-        res.status(503).json({ status: 'Not Ready', error: 'Database connection failed' });
+        res.status(503).json({ 
+          status: 'Not Ready', 
+          error: 'Readiness check exception',
+          timestamp: new Date().toISOString()
+        });
       }
     });
 
@@ -341,9 +379,17 @@ async function startServer() {
     });
 
     // Graceful shutdown handling
-    const gracefulShutdown = (signal: string) => {
+    const gracefulShutdown = async (signal: string) => {
       logger.info(`Received ${signal}. Starting graceful shutdown...`);
-            
+      
+      // Close database connections first
+      try {
+        await closeDatabase();
+        logger.info('Database connections closed successfully');
+      } catch (error) {
+        logger.error('Error closing database connections:', error);
+      }
+      
       server.close(() => {
         logger.info('HTTP server closed.');
         logger.info('Application shutdown complete.');
