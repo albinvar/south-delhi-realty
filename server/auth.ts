@@ -215,19 +215,60 @@ function ensureSuperAdmin(req: any, res: any, next: any) {
   next();
 }
 
-// Login route without rate limiting
+// Login route with enhanced error handling
 router.post('/login', (req, res, next) => {
   passport.authenticate('local', (err: any, user: any, info: any) => {
     if (err) {
-      return next(err);
+      console.error('🚨 Authentication error:', err);
+      
+      // Check if it's a database connection issue
+      if (err.code === 'ETIMEDOUT' || err.message.includes('ETIMEDOUT')) {
+        console.error('❌ Database connection timeout during login');
+        return res.status(500).json({ 
+          message: 'Database connection timeout. Please try again in a few moments.',
+          error: 'DATABASE_TIMEOUT'
+        });
+      }
+      
+      if (err.code === 'ECONNREFUSED' || err.message.includes('ECONNREFUSED')) {
+        console.error('❌ Database connection refused during login');
+        return res.status(500).json({ 
+          message: 'Database connection error. Please try again later.',
+          error: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+      
+      // Generic database error
+      if (err.message.includes('Failed query') || err.name === 'DrizzleQueryError') {
+        console.error('❌ Database query error during login');
+        return res.status(500).json({ 
+          message: 'Database error. Please try again later.',
+          error: 'DATABASE_ERROR'
+        });
+      }
+      
+      // Generic error
+      return res.status(500).json({ 
+        message: 'An unexpected error occurred. Please try again.',
+        error: 'AUTHENTICATION_ERROR'
+      });
     }
+    
     if (!user) {
+      console.warn('⚠️  Login failed - invalid credentials:', info);
       return res.status(401).json(info);
     }
+    
     req.logIn(user, (err) => {
       if (err) {
-        return next(err);
+        console.error('🚨 Session creation error:', err);
+        return res.status(500).json({ 
+          message: 'Failed to create session. Please try again.',
+          error: 'SESSION_ERROR'
+        });
       }
+      
+      console.log('✅ Login successful for user:', user.username);
       return res.json(user);
     });
   })(req, res, next);
@@ -274,7 +315,25 @@ router.get('/google/callback', (req, res, next) => {
   }, (err, user, info) => {
     if (err) {
       console.error('❌ Google OAuth error:', err);
-      return next(err);
+      
+      // Handle specific database connection errors
+      if (err.code === 'ETIMEDOUT' || err.message.includes('ETIMEDOUT')) {
+        console.error('❌ Database connection timeout during Google OAuth');
+        return res.redirect('/auth?error=database_timeout');
+      }
+      
+      if (err.code === 'ECONNREFUSED' || err.message.includes('ECONNREFUSED')) {
+        console.error('❌ Database connection refused during Google OAuth');
+        return res.redirect('/auth?error=database_connection_error');
+      }
+      
+      // Handle OAuth-specific errors
+      if (err.name === 'InternalOAuthError' && err.oauthError?.code === 'ETIMEDOUT') {
+        console.error('❌ OAuth provider timeout');
+        return res.redirect('/auth?error=oauth_timeout');
+      }
+      
+      return res.redirect('/auth?error=system_error');
     }
 
     if (!user) {
@@ -293,7 +352,13 @@ router.get('/google/callback', (req, res, next) => {
     req.logIn(user, (loginErr) => {
       if (loginErr) {
         console.error('❌ Login error:', loginErr);
-        return next(loginErr);
+        
+        // Handle session creation errors
+        if (loginErr.code === 'ETIMEDOUT' || loginErr.message.includes('ETIMEDOUT')) {
+          return res.redirect('/auth?error=session_timeout');
+        }
+        
+        return res.redirect('/auth?error=session_error');
       }
 
       console.log('✅ Google OAuth successful for user:', user.email);

@@ -37,42 +37,65 @@ const sessionStore = new MemoryStore({
   noDisposeOnSet: true
 });
 
-// Database retry wrapper function with exponential backoff
+// Enhanced database retry wrapper function with better timeout handling
 async function withRetry<T>(
   operation: () => Promise<T>, 
-  maxRetries = 3, 
-  baseDelay = 1000,
+  maxRetries = 5,                    // Increased default retries
+  baseDelay = 2000,                  // Increased base delay
   operationName = 'database operation'
 ): Promise<T> {
   let lastError: Error;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔄 Executing ${operationName} (attempt ${attempt}/${maxRetries})`);
-      const result = await operation();
+      // Add timeout wrapper for individual operations
+      const result = await Promise.race([
+        operation(),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error(`${operationName} timeout after 30 seconds`)), 30000)
+        )
+      ]);
+      
       if (attempt > 1) {
         console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
       }
       return result;
+      
     } catch (error: any) {
       lastError = error;
       console.error(`❌ ${operationName} failed on attempt ${attempt}:`, {
         message: error.message,
         code: error.code,
-        errno: error.errno
+        errno: error.errno,
+        sqlState: error.sqlState
       });
       
-      // Don't retry for non-timeout errors
-      if (error.code !== 'ETIMEDOUT' && error.code !== 'ECONNRESET' && error.code !== 'ECONNREFUSED') {
+      // Retry on timeout, connection reset, connection refused, and connection lost errors
+      const retryableErrors = [
+        'ETIMEDOUT', 
+        'ECONNRESET', 
+        'ECONNREFUSED', 
+        'ENOTFOUND',
+        'EPIPE',
+        'ECONNABORTED'
+      ];
+      
+      if (!retryableErrors.includes(error.code) && !error.message.includes('timeout')) {
+        console.error(`🚫 Non-retryable error for ${operationName}:`, error.code);
         throw error;
       }
       
       if (attempt === maxRetries) {
         console.error(`💥 ${operationName} failed after ${maxRetries} attempts`);
+        console.error(`🔧 Final error details:`, {
+          message: error.message,
+          code: error.code,
+          sqlState: error.sqlState
+        });
         throw new Error(`${operationName} failed after ${maxRetries} attempts: ${error.message}`);
       }
       
-      const delay = baseDelay * Math.pow(1.5, attempt - 1);
+      const delay = Math.min(baseDelay * Math.pow(1.5, attempt - 1), 10000); // Cap at 10s
       console.log(`⏳ Waiting ${delay}ms before retry...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
