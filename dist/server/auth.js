@@ -337,4 +337,26 @@ router.get('/google/callback', (req, res, next) => {
         });
     })(req, res, next);
 });
+router.get('/debug-session', (req, res) => {
+    const sessionInfo = {
+        sessionID: req.sessionID,
+        sessionExists: !!req.session,
+        isAuthenticated: req.isAuthenticated(),
+        user: req.user,
+        sessionData: req.session,
+        passport: req.session?.passport,
+        cookies: req.headers.cookie,
+        userAgent: req.headers['user-agent'],
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        sessionStoreType: typeof req.session.store
+    };
+    console.log('🔍 Session Debug Info:', sessionInfo);
+    res.json({
+        message: 'Session debug information',
+        data: sessionInfo
+    });
+});
 exports.default = router;
