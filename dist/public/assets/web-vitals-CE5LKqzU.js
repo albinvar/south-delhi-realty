@@ -60,12 +60,12 @@ const h = (e2, t2, n2 = {}) => {
 };
 let u = -1;
 const l = () => "hidden" !== document.visibilityState || document.prerendering ? 1 / 0 : 0, m = (e2) => {
-  "hidden" === document.visibilityState && u > -1 && (u = "visibilitychange" === e2.type ? e2.timeStamp : 0, p());
+  "hidden" === document.visibilityState && u > -1 && (u = "visibilitychange" === e2.type ? e2.timeStamp : 0, v());
 }, g = () => {
   addEventListener("visibilitychange", m, true), addEventListener("prerenderingchange", m, true);
-}, p = () => {
-  removeEventListener("visibilitychange", m, true), removeEventListener("prerenderingchange", m, true);
 }, v = () => {
+  removeEventListener("visibilitychange", m, true), removeEventListener("prerenderingchange", m, true);
+}, p = () => {
   if (u < 0) {
     const e2 = s(), n2 = document.prerendering ? void 0 : globalThis.performance.getEntriesByType("visibility-state").filter((t2) => "hidden" === t2.name && t2.startTime > e2)[0]?.startTime;
     u = n2 ?? l(), g(), t(() => {
@@ -81,7 +81,7 @@ const l = () => "hidden" !== document.visibilityState || document.prerendering ?
   document.prerendering ? addEventListener("prerenderingchange", () => e2(), true) : e2();
 }, b = [1800, 3e3], P = (e2, o2 = {}) => {
   y(() => {
-    const c2 = v();
+    const c2 = p();
     let a2, d2 = r("FCP");
     const f2 = h("paint", (e3) => {
       for (const t2 of e3) "first-contentful-paint" === t2.name && (f2.disconnect(), t2.startTime < c2.firstHiddenTime && (d2.value = Math.max(t2.startTime - s(), 0), d2.entries.push(t2), a2(true)));
@@ -120,9 +120,9 @@ class A {
     __publicField(this, "u", []);
     __publicField(this, "l", /* @__PURE__ */ new Map());
     __publicField(this, "m");
-    __publicField(this, "p");
+    __publicField(this, "v");
   }
-  v() {
+  p() {
     k = w(), this.u.length = 0, this.l.clear();
   }
   P() {
@@ -138,13 +138,15 @@ class A {
         const e3 = this.u.splice(10);
         for (const t3 of e3) this.l.delete(t3.id);
       }
-      this.p?.(n2);
+      this.v?.(n2);
     }
   }
 }
 const B = (e2) => {
   const t2 = globalThis.requestIdleCallback || setTimeout;
-  "hidden" === document.visibilityState ? e2() : (t2(e2 = f(e2)), document.addEventListener("visibilitychange", e2, { once: true }));
+  "hidden" === document.visibilityState ? e2() : (e2 = f(e2), document.addEventListener("visibilitychange", e2, { once: true }), t2(() => {
+    e2(), document.removeEventListener("visibilitychange", e2);
+  }));
 }, N = [200, 500], S = (e2, i2 = {}) => {
   globalThis.PerformanceEventTiming && "interactionId" in PerformanceEventTiming.prototype && y(() => {
     F();
@@ -159,7 +161,7 @@ const B = (e2) => {
     o2 = n(e2, s2, N, i2.reportAllChanges), f2 && (f2.observe({ type: "first-input", buffered: true }), document.addEventListener("visibilitychange", () => {
       "hidden" === document.visibilityState && (d2(f2.takeRecords()), o2(true));
     }), t(() => {
-      c2.v(), s2 = r("INP"), o2 = n(e2, s2, N, i2.reportAllChanges);
+      c2.p(), s2 = r("INP"), o2 = n(e2, s2, N, i2.reportAllChanges);
     }));
   });
 };
@@ -173,7 +175,7 @@ class q {
 }
 const x = [2500, 4e3], O = (e2, o2 = {}) => {
   y(() => {
-    const c2 = v();
+    const c2 = p();
     let d2, u2 = r("LCP");
     const l2 = a(o2, q), m2 = (e3) => {
       o2.reportAllChanges || (e3 = e3.slice(-1));

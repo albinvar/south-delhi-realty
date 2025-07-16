@@ -35,20 +35,35 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.db = void 0;
 exports.initializeDB = initializeDB;
+exports.healthCheckDatabase = healthCheckDatabase;
+exports.closeDatabase = closeDatabase;
 const mysql2_1 = require("drizzle-orm/mysql2");
 const mysql = __importStar(require("mysql2/promise"));
 const schema = __importStar(require("../shared/schema"));
 if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
     throw new Error("DATABASE_URL or DB_HOST must be provided");
 }
-const connection = process.env.DATABASE_URL
-    ? mysql.createPool({
+const connectionConfig = process.env.DATABASE_URL
+    ? {
         uri: process.env.DATABASE_URL,
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-    })
-    : mysql.createPool({
+        acquireTimeout: 10000,
+        timeout: 15000,
+        reconnect: true,
+        keepAliveInitialDelay: 0,
+        enableKeepAlive: true,
+        connectTimeout: 20000,
+        supportBigNumbers: true,
+        bigNumberStrings: true,
+        dateStrings: false,
+        debug: false,
+        trace: false,
+        multipleStatements: false,
+        charset: 'utf8mb4'
+    }
+    : {
         host: process.env.DB_HOST || "localhost",
         user: process.env.DB_USER || "root",
         password: process.env.DB_PASSWORD || "",
@@ -57,22 +72,93 @@ const connection = process.env.DATABASE_URL
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-    });
+        acquireTimeout: 10000,
+        timeout: 15000,
+        reconnect: true,
+        keepAliveInitialDelay: 0,
+        enableKeepAlive: true,
+        connectTimeout: 20000,
+        supportBigNumbers: true,
+        bigNumberStrings: true,
+        dateStrings: false,
+        debug: false,
+        trace: false,
+        multipleStatements: false,
+        charset: 'utf8mb4'
+    };
+if (process.env.NODE_ENV === 'production' && process.env.DB_SSL_ENABLED === 'true') {
+    connectionConfig.ssl = {
+        rejectUnauthorized: false
+    };
+}
+const connection = mysql.createPool(connectionConfig);
 exports.db = (0, mysql2_1.drizzle)(connection, { schema, mode: "default" });
+async function testDatabaseConnection(retries = 3, delay = 2000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            console.log(`🔄 Testing database connection (attempt ${i + 1}/${retries})...`);
+            const conn = await connection.getConnection();
+            await conn.execute('SELECT 1 as test');
+            console.log('✅ Database connection test successful');
+            console.log('📊 Database connection info:', {
+                host: process.env.DB_HOST,
+                user: process.env.DB_USER,
+                database: process.env.DB_NAME,
+                port: process.env.DB_PORT,
+                timeout: connectionConfig.timeout,
+                acquireTimeout: connectionConfig.acquireTimeout,
+                connectTimeout: connectionConfig.connectTimeout
+            });
+            conn.release();
+            return;
+        }
+        catch (error) {
+            console.error(`❌ Database connection attempt ${i + 1} failed:`, {
+                message: error.message,
+                code: error.code,
+                errno: error.errno,
+                sqlState: error.sqlState
+            });
+            if (i === retries - 1) {
+                throw new Error(`Failed to connect to database after ${retries} attempts: ${error.message}`);
+            }
+            console.log(`⏳ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 1.5;
+        }
+    }
+}
 async function initializeDB() {
     try {
-        const conn = await connection.getConnection();
-        console.log('✅ Database connection established successfully');
-        console.log('📊 Database connection info:', {
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            database: process.env.DB_NAME,
-            port: process.env.DB_PORT
-        });
-        conn.release();
+        await testDatabaseConnection();
+        console.log('✅ Database initialized successfully with enhanced configuration');
     }
     catch (error) {
         console.error('❌ Failed to initialize database:', error);
         throw error;
+    }
+}
+async function healthCheckDatabase() {
+    try {
+        const conn = await Promise.race([
+            connection.getConnection(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Health check timeout')), 5000))
+        ]);
+        await conn.execute('SELECT 1 as health_check');
+        conn.release();
+        return true;
+    }
+    catch (error) {
+        console.error('Health check failed:', error);
+        return false;
+    }
+}
+async function closeDatabase() {
+    try {
+        await connection.end();
+        console.log('📴 Database connection pool closed');
+    }
+    catch (error) {
+        console.error('Error closing database connection:', error);
     }
 }

@@ -12810,6 +12810,7 @@ var Query = (_d = class extends Removable {
           fetchMeta: action.meta ?? null
         };
       case "success":
+        __privateSet(this, _revertState, void 0);
         return {
           ...state,
           data: action.data,
@@ -24389,18 +24390,18 @@ function cloneObject(data) {
   }
   return copy;
 }
-var compact = (value) => Array.isArray(value) ? value.filter(Boolean) : [];
+var isKey = (value) => /^\w*$/.test(value);
 var isUndefined = (val) => val === void 0;
+var compact = (value) => Array.isArray(value) ? value.filter(Boolean) : [];
+var stringToPath = (input) => compact(input.replace(/["|']|\]/g, "").split(/\.|\[/));
 var get = (object, path, defaultValue) => {
   if (!path || !isObject(object)) {
     return defaultValue;
   }
-  const result = compact(path.split(/[,[\].]+?/)).reduce((result2, key) => isNullOrUndefined(result2) ? result2 : result2[key], object);
+  const result = (isKey(path) ? [path] : stringToPath(path)).reduce((result2, key) => isNullOrUndefined(result2) ? result2 : result2[key], object);
   return isUndefined(result) || result === object ? isUndefined(object[path]) ? defaultValue : object[path] : result;
 };
 var isBoolean = (value) => typeof value === "boolean";
-var isKey = (value) => /^\w*$/.test(value);
-var stringToPath = (input) => compact(input.replace(/["|']|\]/g, "").split(/\.|\[/));
 var set = (object, path, value) => {
   let index2 = -1;
   const tempPath = isKey(path) ? [path] : stringToPath(path);
@@ -24442,6 +24443,7 @@ const INPUT_VALIDATION_RULES = {
   validate: "validate"
 };
 const HookFormContext = React.createContext(null);
+HookFormContext.displayName = "HookFormContext";
 const useFormContext = () => React.useContext(HookFormContext);
 const FormProvider = (props) => {
   const { children, ...data } = props;
@@ -25970,12 +25972,20 @@ function useForm(props = {}) {
     defaultValues: isFunction(props.defaultValues) ? void 0 : props.defaultValues
   });
   if (!_formControl.current) {
-    _formControl.current = {
-      ...props.formControl ? props.formControl : createFormControl(props),
-      formState
-    };
-    if (props.formControl && props.defaultValues && !isFunction(props.defaultValues)) {
-      props.formControl.reset(props.defaultValues, props.resetOptions);
+    if (props.formControl) {
+      _formControl.current = {
+        ...props.formControl,
+        formState
+      };
+      if (props.defaultValues && !isFunction(props.defaultValues)) {
+        props.formControl.reset(props.defaultValues, props.resetOptions);
+      }
+    } else {
+      const { formControl, ...rest } = createFormControl(props);
+      _formControl.current = {
+        ...rest,
+        formState
+      };
     }
   }
   const control = _formControl.current.control;
@@ -46309,7 +46319,7 @@ function useLazyLoading() {
 }
 function usePerformanceMonitoring() {
   reactExports.useEffect(() => {
-    __vitePreload(() => import("./web-vitals-Yiv2VFPU.js"), true ? [] : void 0).then((webVitals) => {
+    __vitePreload(() => import("./web-vitals-CE5LKqzU.js"), true ? [] : void 0).then((webVitals) => {
       if (webVitals.onCLS) {
         webVitals.onCLS((metric) => {
         });

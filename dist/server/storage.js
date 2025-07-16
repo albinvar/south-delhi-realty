@@ -20,6 +20,38 @@ const sessionStore = new MemoryStore({
     },
     noDisposeOnSet: true
 });
+async function withRetry(operation, maxRetries = 3, baseDelay = 1000, operationName = 'database operation') {
+    let lastError;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`🔄 Executing ${operationName} (attempt ${attempt}/${maxRetries})`);
+            const result = await operation();
+            if (attempt > 1) {
+                console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
+            }
+            return result;
+        }
+        catch (error) {
+            lastError = error;
+            console.error(`❌ ${operationName} failed on attempt ${attempt}:`, {
+                message: error.message,
+                code: error.code,
+                errno: error.errno
+            });
+            if (error.code !== 'ETIMEDOUT' && error.code !== 'ECONNRESET' && error.code !== 'ECONNREFUSED') {
+                throw error;
+            }
+            if (attempt === maxRetries) {
+                console.error(`💥 ${operationName} failed after ${maxRetries} attempts`);
+                throw new Error(`${operationName} failed after ${maxRetries} attempts: ${error.message}`);
+            }
+            const delay = baseDelay * Math.pow(1.5, attempt - 1);
+            console.log(`⏳ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    throw lastError;
+}
 class DatabaseStorage {
     sessionStore;
     constructor() {
@@ -34,16 +66,22 @@ class DatabaseStorage {
         return user;
     }
     async findUserByUsername(username) {
-        const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.username, username));
-        return user;
+        return withRetry(async () => {
+            const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.username, username)).limit(1);
+            return user;
+        }, 3, 1000, `findUserByUsername(${username})`);
     }
     async findUserByEmail(email) {
-        const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email));
-        return user;
+        return withRetry(async () => {
+            const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)).limit(1);
+            return user;
+        }, 3, 1000, `findUserByEmail(${email})`);
     }
     async findUserByGoogleId(googleId) {
-        const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.googleId, googleId));
-        return user;
+        return withRetry(async () => {
+            const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.googleId, googleId)).limit(1);
+            return user;
+        }, 3, 1000, `findUserByGoogleId(${googleId})`);
     }
     async getUserByUsername(username) {
         const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.username, username));
@@ -156,123 +194,125 @@ class DatabaseStorage {
         return propertiesWithMedia;
     }
     async getPropertiesWithPagination(filters) {
-        let query = db_1.db.select({
-            id: schema_1.properties.id,
-            title: schema_1.properties.title,
-            slug: schema_1.properties.slug,
-            description: schema_1.properties.description,
-            status: schema_1.properties.status,
-            category: schema_1.properties.category,
-            propertyType: schema_1.properties.propertyType,
-            subType: schema_1.properties.subType,
-            portion: schema_1.properties.portion,
-            area: schema_1.properties.area,
-            areaUnit: schema_1.properties.areaUnit,
-            furnishedStatus: schema_1.properties.furnishedStatus,
-            bedrooms: schema_1.properties.bedrooms,
-            bathrooms: schema_1.properties.bathrooms,
-            balconies: schema_1.properties.balconies,
-            facing: schema_1.properties.facing,
-            parking: schema_1.properties.parking,
-            age: schema_1.properties.age,
-            price: schema_1.properties.price,
-            priceNegotiable: schema_1.properties.priceNegotiable,
-            brokerage: schema_1.properties.brokerage,
-            contactDetails: schema_1.properties.contactDetails,
-            latitude: schema_1.properties.latitude,
-            longitude: schema_1.properties.longitude,
-            isActive: schema_1.properties.isActive,
-            createdAt: schema_1.properties.createdAt,
-            updatedAt: schema_1.properties.updatedAt,
-        }).from(schema_1.properties);
-        let countQuery = db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` }).from(schema_1.properties);
-        console.log("Enhanced pagination filters received:", filters);
-        const conditions = [];
-        conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.isActive, true));
-        if (filters?.status && filters.status !== 'all') {
-            if (filters.status === 'sale' || filters.status === 'rent') {
-                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.status, filters.status));
+        return withRetry(async () => {
+            let query = db_1.db.select({
+                id: schema_1.properties.id,
+                title: schema_1.properties.title,
+                slug: schema_1.properties.slug,
+                description: schema_1.properties.description,
+                status: schema_1.properties.status,
+                category: schema_1.properties.category,
+                propertyType: schema_1.properties.propertyType,
+                subType: schema_1.properties.subType,
+                portion: schema_1.properties.portion,
+                area: schema_1.properties.area,
+                areaUnit: schema_1.properties.areaUnit,
+                furnishedStatus: schema_1.properties.furnishedStatus,
+                bedrooms: schema_1.properties.bedrooms,
+                bathrooms: schema_1.properties.bathrooms,
+                balconies: schema_1.properties.balconies,
+                facing: schema_1.properties.facing,
+                parking: schema_1.properties.parking,
+                age: schema_1.properties.age,
+                price: schema_1.properties.price,
+                priceNegotiable: schema_1.properties.priceNegotiable,
+                brokerage: schema_1.properties.brokerage,
+                contactDetails: schema_1.properties.contactDetails,
+                latitude: schema_1.properties.latitude,
+                longitude: schema_1.properties.longitude,
+                isActive: schema_1.properties.isActive,
+                createdAt: schema_1.properties.createdAt,
+                updatedAt: schema_1.properties.updatedAt,
+            }).from(schema_1.properties);
+            let countQuery = db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` }).from(schema_1.properties);
+            console.log("Enhanced pagination filters received:", filters);
+            const conditions = [];
+            conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.isActive, true));
+            if (filters?.status && filters.status !== 'all') {
+                if (filters.status === 'sale' || filters.status === 'rent') {
+                    conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.status, filters.status));
+                }
             }
-        }
-        if (filters?.category && filters.category !== 'all') {
-            if (filters.category === 'residential' || filters.category === 'commercial') {
-                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.category, filters.category));
+            if (filters?.category && filters.category !== 'all') {
+                if (filters.category === 'residential' || filters.category === 'commercial') {
+                    conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.category, filters.category));
+                }
             }
-        }
-        if (filters?.propertyType && filters.propertyType !== 'all') {
-            if (['apartment', 'independent-house', 'villa', 'farm-house', 'shop', 'basement'].includes(filters.propertyType)) {
-                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.propertyType, filters.propertyType));
+            if (filters?.propertyType && filters.propertyType !== 'all') {
+                if (['apartment', 'independent-house', 'villa', 'farm-house', 'shop', 'basement'].includes(filters.propertyType)) {
+                    conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.propertyType, filters.propertyType));
+                }
             }
-        }
-        if (filters?.subType && filters.subType !== 'all') {
-            if (['1rk', '1bhk', '2bhk', '3bhk', '4bhk', 'plot', 'other'].includes(filters.subType)) {
-                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.subType, filters.subType));
+            if (filters?.subType && filters.subType !== 'all') {
+                if (['1rk', '1bhk', '2bhk', '3bhk', '4bhk', 'plot', 'other'].includes(filters.subType)) {
+                    conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.subType, filters.subType));
+                }
             }
-        }
-        if (filters?.minPrice && filters.minPrice > 0) {
-            conditions.push((0, drizzle_orm_1.gte)(schema_1.properties.price, filters.minPrice));
-        }
-        if (filters?.maxPrice && filters.maxPrice > 0) {
-            conditions.push((0, drizzle_orm_1.lte)(schema_1.properties.price, filters.maxPrice));
-        }
-        if (filters?.minArea && filters.minArea > 0) {
-            conditions.push((0, drizzle_orm_1.gte)(schema_1.properties.area, filters.minArea));
-        }
-        if (filters?.maxArea && filters.maxArea > 0) {
-            conditions.push((0, drizzle_orm_1.lte)(schema_1.properties.area, filters.maxArea));
-        }
-        if (filters?.bedrooms && filters.bedrooms > 0) {
-            conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.bedrooms, filters.bedrooms));
-        }
-        if (filters?.bathrooms && filters.bathrooms > 0) {
-            conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.bathrooms, filters.bathrooms));
-        }
-        if (filters?.furnishedStatus && filters.furnishedStatus !== 'all') {
-            if (['furnished', 'semi-furnished', 'unfurnished'].includes(filters.furnishedStatus)) {
-                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.furnishedStatus, filters.furnishedStatus));
+            if (filters?.minPrice && filters.minPrice > 0) {
+                conditions.push((0, drizzle_orm_1.gte)(schema_1.properties.price, filters.minPrice));
             }
-        }
-        if (filters?.parking && filters.parking !== 'all') {
-            if (['car', 'two-wheeler', 'both', 'none'].includes(filters.parking)) {
-                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.parking, filters.parking));
+            if (filters?.maxPrice && filters.maxPrice > 0) {
+                conditions.push((0, drizzle_orm_1.lte)(schema_1.properties.price, filters.maxPrice));
             }
-        }
-        if (filters?.facing && filters.facing !== 'all') {
-            if (['east', 'west', 'north', 'south', 'road', 'park', 'greenery'].includes(filters.facing)) {
-                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.facing, filters.facing));
+            if (filters?.minArea && filters.minArea > 0) {
+                conditions.push((0, drizzle_orm_1.gte)(schema_1.properties.area, filters.minArea));
             }
-        }
-        if (filters?.search && filters.search.trim()) {
-            const searchTerm = `%${filters.search.trim()}%`;
-            conditions.push((0, drizzle_orm_1.sql) `(${schema_1.properties.title} LIKE ${searchTerm} OR ${schema_1.properties.description} LIKE ${searchTerm})`);
-        }
-        if (conditions.length > 0) {
-            query = query.where((0, drizzle_orm_1.and)(...conditions));
-            countQuery = countQuery.where((0, drizzle_orm_1.and)(...conditions));
-        }
-        const [countResult] = await countQuery;
-        const total = Number(countResult.count);
-        query = query.orderBy((0, drizzle_orm_1.desc)(schema_1.properties.createdAt));
-        const page = filters?.page || 1;
-        const limit = filters?.limit || 9;
-        const offset = (page - 1) * limit;
-        query = query.limit(limit).offset(offset);
-        const propertyList = await query;
-        console.log(`Found ${propertyList.length} properties out of ${total} total after enhanced filtering`);
-        const propertiesWithMedia = [];
-        for (const property of propertyList) {
-            const propertyMediaItems = await db_1.db.select().from(schema_1.propertyMedia)
-                .where((0, drizzle_orm_1.eq)(schema_1.propertyMedia.propertyId, property.id))
-                .orderBy(schema_1.propertyMedia.orderIndex);
-            propertiesWithMedia.push({
-                ...property,
-                media: propertyMediaItems
-            });
-        }
-        return {
-            properties: propertiesWithMedia,
-            total
-        };
+            if (filters?.maxArea && filters.maxArea > 0) {
+                conditions.push((0, drizzle_orm_1.lte)(schema_1.properties.area, filters.maxArea));
+            }
+            if (filters?.bedrooms && filters.bedrooms > 0) {
+                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.bedrooms, filters.bedrooms));
+            }
+            if (filters?.bathrooms && filters.bathrooms > 0) {
+                conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.bathrooms, filters.bathrooms));
+            }
+            if (filters?.furnishedStatus && filters.furnishedStatus !== 'all') {
+                if (['furnished', 'semi-furnished', 'unfurnished'].includes(filters.furnishedStatus)) {
+                    conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.furnishedStatus, filters.furnishedStatus));
+                }
+            }
+            if (filters?.parking && filters.parking !== 'all') {
+                if (['car', 'two-wheeler', 'both', 'none'].includes(filters.parking)) {
+                    conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.parking, filters.parking));
+                }
+            }
+            if (filters?.facing && filters.facing !== 'all') {
+                if (['east', 'west', 'north', 'south', 'road', 'park', 'greenery'].includes(filters.facing)) {
+                    conditions.push((0, drizzle_orm_1.eq)(schema_1.properties.facing, filters.facing));
+                }
+            }
+            if (filters?.search && filters.search.trim()) {
+                const searchTerm = `%${filters.search.trim()}%`;
+                conditions.push((0, drizzle_orm_1.sql) `(${schema_1.properties.title} LIKE ${searchTerm} OR ${schema_1.properties.description} LIKE ${searchTerm})`);
+            }
+            if (conditions.length > 0) {
+                query = query.where((0, drizzle_orm_1.and)(...conditions));
+                countQuery = countQuery.where((0, drizzle_orm_1.and)(...conditions));
+            }
+            const [countResult] = await countQuery;
+            const total = Number(countResult.count);
+            query = query.orderBy((0, drizzle_orm_1.desc)(schema_1.properties.createdAt));
+            const page = filters?.page || 1;
+            const limit = filters?.limit || 9;
+            const offset = (page - 1) * limit;
+            query = query.limit(limit).offset(offset);
+            const propertyList = await query;
+            console.log(`Found ${propertyList.length} properties out of ${total} total after enhanced filtering`);
+            const propertiesWithMedia = [];
+            for (const property of propertyList) {
+                const propertyMediaItems = await db_1.db.select().from(schema_1.propertyMedia)
+                    .where((0, drizzle_orm_1.eq)(schema_1.propertyMedia.propertyId, property.id))
+                    .orderBy(schema_1.propertyMedia.orderIndex);
+                propertiesWithMedia.push({
+                    ...property,
+                    media: propertyMediaItems
+                });
+            }
+            return {
+                properties: propertiesWithMedia,
+                total
+            };
+        }, 3, 1000, 'getPropertiesWithPagination');
     }
     async getPropertyById(id) {
         const [property] = await db_1.db.select({
@@ -681,22 +721,24 @@ class DatabaseStorage {
         }
     }
     async getDashboardStats() {
-        const totalProperties = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` }).from(schema_1.properties);
-        const propertiesForSale = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` })
-            .from(schema_1.properties)
-            .where((0, drizzle_orm_1.eq)(schema_1.properties.status, 'sale'));
-        const propertiesForRent = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` })
-            .from(schema_1.properties)
-            .where((0, drizzle_orm_1.eq)(schema_1.properties.status, 'rent'));
-        const newInquiries = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` })
-            .from(schema_1.inquiries)
-            .where((0, drizzle_orm_1.eq)(schema_1.inquiries.status, 'new'));
-        return {
-            totalProperties: Number(totalProperties[0].count),
-            propertiesForSale: Number(propertiesForSale[0].count),
-            propertiesForRent: Number(propertiesForRent[0].count),
-            newInquiries: Number(newInquiries[0].count)
-        };
+        return withRetry(async () => {
+            const totalProperties = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` }).from(schema_1.properties);
+            const propertiesForSale = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` })
+                .from(schema_1.properties)
+                .where((0, drizzle_orm_1.eq)(schema_1.properties.status, 'sale'));
+            const propertiesForRent = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` })
+                .from(schema_1.properties)
+                .where((0, drizzle_orm_1.eq)(schema_1.properties.status, 'rent'));
+            const newInquiries = await db_1.db.select({ count: (0, drizzle_orm_1.sql) `count(*)` })
+                .from(schema_1.inquiries)
+                .where((0, drizzle_orm_1.eq)(schema_1.inquiries.status, 'new'));
+            return {
+                totalProperties: Number(totalProperties[0].count),
+                propertiesForSale: Number(propertiesForSale[0].count),
+                propertiesForRent: Number(propertiesForRent[0].count),
+                newInquiries: Number(newInquiries[0].count)
+            };
+        }, 3, 1000, 'getDashboardStats');
     }
     async getUsers() {
         return await db_1.db.select({

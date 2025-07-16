@@ -202,22 +202,61 @@ async function startServer() {
         app.use(passport_1.default.session());
         app.get('/health', async (req, res) => {
             try {
-                await storage_1.storage.getDashboardStats();
-                res.status(200).json({ status: 'healthy' });
+                const isHealthy = await (0, db_1.healthCheckDatabase)();
+                if (isHealthy) {
+                    res.status(200).json({
+                        status: 'healthy',
+                        timestamp: new Date().toISOString(),
+                        uptime: process.uptime(),
+                        environment: process.env.NODE_ENV
+                    });
+                }
+                else {
+                    res.status(503).json({
+                        status: 'unhealthy',
+                        error: 'Database connection failed',
+                        timestamp: new Date().toISOString()
+                    });
+                }
             }
             catch (error) {
                 logger.error('Health check failed:', error);
-                res.status(503).json({ status: 'unhealthy', error: 'Database connection failed' });
+                res.status(503).json({
+                    status: 'unhealthy',
+                    error: 'Health check exception',
+                    timestamp: new Date().toISOString()
+                });
             }
         });
         app.get('/ready', async (req, res) => {
             try {
-                await storage_1.storage.getDashboardStats();
-                res.status(200).json({ status: 'Ready' });
+                const isReady = await Promise.race([
+                    (0, db_1.healthCheckDatabase)(),
+                    new Promise((resolve) => {
+                        setTimeout(() => resolve(false), 3000);
+                    })
+                ]);
+                if (isReady) {
+                    res.status(200).json({
+                        status: 'Ready',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                else {
+                    res.status(503).json({
+                        status: 'Not Ready',
+                        error: 'Database not ready',
+                        timestamp: new Date().toISOString()
+                    });
+                }
             }
             catch (error) {
                 logger.error('Readiness check failed:', error);
-                res.status(503).json({ status: 'Not Ready', error: 'Database connection failed' });
+                res.status(503).json({
+                    status: 'Not Ready',
+                    error: 'Readiness check exception',
+                    timestamp: new Date().toISOString()
+                });
             }
         });
         app.get('/metrics', (req, res) => {
@@ -298,8 +337,15 @@ async function startServer() {
                 ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
             });
         });
-        const gracefulShutdown = (signal) => {
+        const gracefulShutdown = async (signal) => {
             logger.info(`Received ${signal}. Starting graceful shutdown...`);
+            try {
+                await (0, db_1.closeDatabase)();
+                logger.info('Database connections closed successfully');
+            }
+            catch (error) {
+                logger.error('Error closing database connections:', error);
+            }
             server.close(() => {
                 logger.info('HTTP server closed.');
                 logger.info('Application shutdown complete.');

@@ -19,20 +19,14 @@ const connectionConfig = process.env.DATABASE_URL
       reconnect: true,              // Enable auto-reconnect
       keepAliveInitialDelay: 0,     // Keep-alive settings
       enableKeepAlive: true,
-      // SSL settings for production
-      ssl: process.env.NODE_ENV === 'production' ? {
-        rejectUnauthorized: false
-      } : false,
       // Additional timeout settings
       connectTimeout: 20000,        // 20 seconds to establish initial connection
-      socketPath: undefined,
       supportBigNumbers: true,
       bigNumberStrings: true,
       dateStrings: false,
       debug: false,
       trace: false,
       multipleStatements: false,
-      flags: '',
       charset: 'utf8mb4'
     }
   : {
@@ -50,25 +44,26 @@ const connectionConfig = process.env.DATABASE_URL
       reconnect: true,              // Enable auto-reconnect
       keepAliveInitialDelay: 0,     // Keep-alive settings
       enableKeepAlive: true,
-      // SSL settings for production
-      ssl: process.env.NODE_ENV === 'production' ? {
-        rejectUnauthorized: false
-      } : false,
       // Additional timeout settings
       connectTimeout: 20000,        // 20 seconds to establish initial connection
-      socketPath: undefined,
       supportBigNumbers: true,
       bigNumberStrings: true,
       dateStrings: false,
       debug: false,
       trace: false,
       multipleStatements: false,
-      flags: '',
       charset: 'utf8mb4'
     };
 
+// Add SSL configuration only for production if needed
+if (process.env.NODE_ENV === 'production' && process.env.DB_SSL_ENABLED === 'true') {
+  (connectionConfig as any).ssl = {
+    rejectUnauthorized: false
+  };
+}
+
 // Create MySQL connection pool with enhanced configuration
-const connection = mysql.createPool(connectionConfig);
+const connection = mysql.createPool(connectionConfig as any);
 
 // Drizzle ORM client
 export const db = drizzle(connection, { schema, mode: "default" });
@@ -90,9 +85,9 @@ async function testDatabaseConnection(retries = 3, delay = 2000): Promise<void> 
         user: process.env.DB_USER,
         database: process.env.DB_NAME,
         port: process.env.DB_PORT,
-        timeout: connectionConfig.timeout,
-        acquireTimeout: connectionConfig.acquireTimeout,
-        connectTimeout: connectionConfig.connectTimeout
+        timeout: (connectionConfig as any).timeout,
+        acquireTimeout: (connectionConfig as any).acquireTimeout,
+        connectTimeout: (connectionConfig as any).connectTimeout
       });
       
       conn.release();
@@ -121,19 +116,6 @@ async function testDatabaseConnection(retries = 3, delay = 2000): Promise<void> 
 export async function initializeDB(): Promise<void> {
   try {
     await testDatabaseConnection();
-    
-    // Set up connection event handlers
-    connection.on('connection', (connection) => {
-      console.log('📡 New database connection established');
-    });
-    
-    connection.on('error', (error) => {
-      console.error('💥 Database connection error:', error);
-      if (error.code === 'PROTOCOL_CONNECTION_LOST') {
-        console.log('🔄 Database connection lost, will attempt to reconnect...');
-      }
-    });
-    
     console.log('✅ Database initialized successfully with enhanced configuration');
     
   } catch (error) {
@@ -147,10 +129,10 @@ export async function healthCheckDatabase(): Promise<boolean> {
   try {
     const conn = await Promise.race([
       connection.getConnection(),
-      new Promise((_, reject) => 
+      new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Health check timeout')), 5000)
       )
-    ]) as mysql.PoolConnection;
+    ]);
     
     await conn.execute('SELECT 1 as health_check');
     conn.release();

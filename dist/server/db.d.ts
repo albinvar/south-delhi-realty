@@ -4,3 +4,5 @@ export declare const db: import("drizzle-orm/mysql2").MySql2Database<typeof sche
     $client: mysql.Pool;
 };
 export declare function initializeDB(): Promise<void>;
+export declare function healthCheckDatabase(): Promise<boolean>;
+export declare function closeDatabase(): Promise<void>;
