@@ -1,8 +1,32 @@
 # South Delhi Real Estate - Production Dockerfile for VPS Deployment
-# Build locally first, then copy built application to production image
+# Multi-stage build: First builds the application, then creates production image
+
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY vite.config.ts ./
+COPY postcss.config.js ./
+COPY tailwind.config.ts ./
+
+# Install all dependencies (including dev dependencies for building)
+RUN npm install
+
+# Copy source code
+COPY client/ ./client/
+COPY server/ ./server/
+COPY shared/ ./shared/
+COPY scripts/ ./scripts/
+
+# Build the application
+RUN npm run build
 
 # Production stage using a lightweight base image
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Install runtime dependencies and curl for health checks
 RUN apk add --no-cache curl dumb-init && \
@@ -15,12 +39,15 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy the pre-built application (build locally before Docker)
-COPY dist/ ./
+# Copy built application from builder stage
+COPY --from=builder /app/dist/ ./
 COPY package*.json ./
 
+# Remove "type": "module" from package.json for CommonJS output
+RUN sed -i '/"type": "module",/d' package.json
+
 # Install only production dependencies
-RUN npm ci --only=production && \
+RUN npm install --omit=dev && \
     npm cache clean --force && \
     rm -rf ~/.npm
 

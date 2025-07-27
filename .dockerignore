@@ -44,6 +44,11 @@ SECURITY.md
 *.md
 !VPS_DEPLOYMENT_GUIDE.md
 
+# Development scripts (except build scripts)
+scripts/
+!scripts/build-client.cjs
+!scripts/deploy-build.cjs
+
 # Deployment scripts (keep for production)
 !deploy-vps.sh
 !health-check.sh

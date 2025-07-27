@@ -37,7 +37,7 @@ echo -e "${GREEN}✓ All required files found${NC}"
 
 # Clean up any existing containers and images
 echo -e "\n${YELLOW}Cleaning up existing containers...${NC}"
-docker-compose -f docker-compose.production.yml down --remove-orphans || true
+docker compose -f docker-compose.production.yml down --remove-orphans || true
 docker container prune -f || true
 
 # Remove old images (optional - comment out if you want to keep them)
@@ -58,7 +58,7 @@ fi
 
 # Start the application
 echo -e "\n${YELLOW}Starting the application...${NC}"
-docker-compose -f docker-compose.production.yml up -d
+docker compose -f docker-compose.production.yml up -d
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Application started successfully${NC}"
@@ -101,8 +101,8 @@ echo -e "Network Port: ${GREEN}7822${NC}"
 
 echo -e "\n${BLUE}=== Useful Commands ===${NC}"
 echo -e "View logs: ${YELLOW}docker logs southdelhirealty-app -f${NC}"
-echo -e "Stop application: ${YELLOW}docker-compose -f docker-compose.production.yml down${NC}"
-echo -e "Restart application: ${YELLOW}docker-compose -f docker-compose.production.yml restart${NC}"
+echo -e "Stop application: ${YELLOW}docker compose -f docker-compose.production.yml down${NC}"
+echo -e "Restart application: ${YELLOW}docker compose -f docker-compose.production.yml restart${NC}"
 echo -e "View container stats: ${YELLOW}docker stats southdelhirealty-app${NC}"
 
 echo -e "\n${GREEN}🚀 Deployment completed successfully!${NC}"
