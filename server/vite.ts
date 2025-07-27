@@ -91,7 +91,8 @@ export async function setupVite(app: Express, server: Server) {
 
 export function serveStatic(app: Express) {
   // When running from dist/server, the public directory is at dist/public
-  const distPath = path.resolve(__dirname, "..", "public");
+  // Use process.cwd() which works in both development and production Docker
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(

@@ -149,10 +149,6 @@ theme.json
 .env.production
 .env.development
 
-# Docker environment files
-.env.docker.local
-docker-compose.override.yml
-
 # Node
 node_modules/
 npm-debug.log*

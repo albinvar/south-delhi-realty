@@ -80,7 +80,7 @@ async function setupVite(app, server) {
     });
 }
 function serveStatic(app) {
-    const distPath = path_1.default.resolve(__dirname, "..", "public");
+    const distPath = path_1.default.resolve(process.cwd(), "dist", "public");
     if (!fs_1.default.existsSync(distPath)) {
         throw new Error(`Could not find the build directory: ${distPath}, make sure to build the client first`);
     }

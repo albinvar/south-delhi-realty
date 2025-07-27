@@ -31,15 +31,18 @@
     "test:e2e": "echo \"E2E tests would go here\"",
     "security:audit": "npm audit --audit-level=moderate",
     "security:fix": "npm audit fix",
-    "docker:dev": "bash scripts/docker-dev.sh dev",
-    "docker:prod": "bash scripts/docker-dev.sh prod",
-    "docker:prod-nginx": "bash scripts/docker-dev.sh prod-nginx",
-    "docker:build": "bash scripts/docker-dev.sh build",
-    "docker:stop": "bash scripts/docker-dev.sh stop",
-    "docker:clean": "bash scripts/docker-dev.sh clean",
-    "docker:logs": "bash scripts/docker-dev.sh logs",
-    "docker:status": "bash scripts/docker-dev.sh status",
-    "docker:setup": "cp .env.docker .env.docker.local && echo 'Please edit .env.docker.local with your configuration'",
+    "docker:dev": "./docker-deploy.sh dev",
+    "docker:prod": "./docker-deploy.sh prod",
+    "docker:prod-nginx": "./docker-deploy.sh prod-nginx",
+    "docker:build": "./docker-deploy.sh build",
+    "docker:stop": "./docker-deploy.sh stop",
+    "docker:clean": "./docker-deploy.sh clean",
+    "docker:logs": "./docker-deploy.sh logs",
+    "docker:status": "./docker-deploy.sh status",
+    "docker:shell": "./docker-deploy.sh shell",
+    "docker:migrate": "./docker-deploy.sh migrate",
+    "docker:backup": "./docker-deploy.sh backup",
+    "docker:setup": "cp .env.docker.example .env.docker.local && echo 'Please edit .env.docker.local with your configuration'",
     "pm2:start": "pm2 start ecosystem.config.cjs",
     "pm2:stop": "pm2 stop south-delhi-real-estate",
     "pm2:restart": "pm2 restart south-delhi-real-estate",
@@ -170,7 +173,7 @@
     "tsx": "^4.19.4"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=18.0.0",
     "npm": ">=8.0.0"
   }
 }

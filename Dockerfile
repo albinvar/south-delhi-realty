@@ -1,83 +1,80 @@
-# Multi-stage build for South Delhi Real Estate webapp
-FROM node:20-alpine AS base
+# Multi-stage build for South Delhi Real Estate App
+FROM ubuntu:22.04 AS base
 
-# Install build dependencies
-RUN apk add --no-cache libc6-compat
+# Install Node.js 20 manually
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Install dependencies only when needed
+FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Install dependencies based on the preferred package manager
 COPY package*.json ./
+# Remove package-lock.json and regenerate it to avoid version conflicts
+RUN npm install --production && npm cache clean --force
 
-# Install dependencies (use npm install instead of npm ci for better compatibility)
-RUN npm install --only=production && npm cache clean --force
-
-# Development stage
-FROM base AS development
-ENV NODE_ENV=development
-
-# Install all dependencies including dev dependencies
-RUN npm install
-
-# Copy source code
-COPY . .
-
-# Expose development ports
-EXPOSE 5000 5173
-
-# Start development server
-CMD ["npm", "run", "dev"]
-
-# Build stage
+# Rebuild the source code only when needed
 FROM base AS builder
-ENV NODE_ENV=production
-
-# Install all dependencies including dev dependencies for build
+WORKDIR /app
+COPY package*.json ./
+# Use npm install instead of npm ci to regenerate lock file
 RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build the application (simplified build process)
-RUN npm run build:server
+# Copy environment variables for build time
+COPY .env .env
 
-# Production stage
-FROM node:20-alpine AS production
-ENV NODE_ENV=production
+# Build the application
+RUN npm run build:production
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
-
-# Create app user for security
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S webapp -u 1001
-
-# Set working directory
+# Production image, copy all the files and run the app
+FROM base AS runner
 WORKDIR /app
 
-# Copy built application from builder stage
-COPY --from=builder --chown=webapp:nodejs /app/dist ./dist
-COPY --from=builder --chown=webapp:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=webapp:nodejs /app/node_modules ./node_modules
+# Set environment to production
+ENV NODE_ENV=production
+ENV PORT=7822
 
-# Copy necessary configuration files
-COPY --from=builder --chown=webapp:nodejs /app/shared ./shared
-COPY --from=builder --chown=webapp:nodejs /app/migrations ./migrations
+# Create a non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nodeuser
 
-# Create required directories
-RUN mkdir -p uploads logs && chown -R webapp:nodejs uploads logs
+# Install global dependencies needed for production
+RUN npm install -g tsx pm2
+
+# Copy package.json and install production dependencies
+COPY package*.json ./
+RUN npm install --production && npm cache clean --force
+
+# Copy built application
+COPY --from=builder --chown=nodeuser:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodeuser:nodejs /app/shared ./shared
+COPY --from=builder --chown=nodeuser:nodejs /app/server ./server
+COPY --from=builder --chown=nodeuser:nodejs /app/migrations ./migrations
+
+# Copy configuration files
+COPY --chown=nodeuser:nodejs ecosystem.config.cjs ./
+COPY --chown=nodeuser:nodejs tsconfig.json ./
+COPY --chown=nodeuser:nodejs tsconfig.server.json ./
+COPY --chown=nodeuser:nodejs drizzle.config.ts ./
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads && chown -R nodeuser:nodejs /app/logs /app/uploads
 
 # Switch to non-root user
-USER webapp
+USER nodeuser
 
-# Expose port
-EXPOSE 5000
+# Expose the port the app runs on
+EXPOSE 7822
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "const http = require('http'); const options = { host: 'localhost', port: process.env.PORT || 7822, path: '/health', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"
 
-# Start application with proper signal handling
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/server/index.js"]
+# Start the application using tsx directly
+CMD ["tsx", "server/index.ts"]

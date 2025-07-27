@@ -1,0 +1,44 @@
+# Alternative Dockerfile using a simpler approach
+# This creates the build locally and copies it to a minimal runtime
+
+# Build stage using local Node.js
+FROM scratch AS build-stage
+# This stage won't actually run, we'll build locally
+
+# Runtime stage with a minimal image
+FROM alpine:latest AS runtime
+
+# Install runtime dependencies only
+RUN apk add --no-cache nodejs npm && \
+    addgroup -g 1001 -S nodejs && \
+    adduser -S node -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy the built application from local build
+COPY dist/ ./dist/
+COPY package.json ./
+COPY ecosystem.config.cjs ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Create necessary directories
+RUN mkdir -p logs uploads
+
+# Change ownership to node user
+RUN chown -R node:nodejs /app
+
+# Switch to non-root user
+USER node
+
+# Expose port
+EXPOSE 7822
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD npm run health-check || exit 1
+
+# Start the application
+CMD ["npm", "start"]

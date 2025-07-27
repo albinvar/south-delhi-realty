@@ -1,132 +1,127 @@
+# Docker Compose for South Delhi Real Estate App
+
 services:
-  # MySQL Database
-  db:
-    image: mysql:8.0
-    container_name: sdr-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-southdelhirealestate123}
-      MYSQL_DATABASE: ${DB_NAME:-southdelhirealestate}
-      MYSQL_USER: ${DB_USER:-sduser}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-sdpassword}
-    ports:
-      - "${DB_PORT:-3306}:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./properties.sql:/docker-entrypoint-initdb.d/01-properties.sql:ro
-      - ./migrations:/docker-entrypoint-initdb.d/migrations:ro
-    networks:
-      - sdr-network
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
-      timeout: 20s
-      retries: 10
-
-  # Redis for session storage (optional, can be removed if using in-memory)
-  redis:
-    image: redis:7-alpine
-    container_name: sdr-redis
-    restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - sdr-network
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      timeout: 3s
-      retries: 5
-
-  # Web Application
-  webapp:
+  # Main application service
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
-    container_name: sdr-webapp
-    restart: unless-stopped
+    container_name: south-delhi-realty-app
     ports:
-      - "${APP_PORT:-5000}:5000"
+      - "7822:7822"
     environment:
-      NODE_ENV: production
-      PORT: 5000
+      # Database Configuration
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
       
-      # Database configuration
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: ${DB_NAME:-southdelhirealestate}
-      DB_USER: ${DB_USER:-sduser}
-      DB_PASSWORD: ${DB_PASSWORD:-sdpassword}
+      # Cloudinary Configuration
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       
-      # Session configuration
-      SESSION_SECRET: ${SESSION_SECRET:-your-super-secret-session-key-change-this-in-production}
+      # Session Configuration
+      - SESSION_SECRET=${SESSION_SECRET}
+      - SESSION_STORE_TYPE=${SESSION_STORE_TYPE}
+      - SESSION_MAX_AGE=${SESSION_MAX_AGE}
+      - SESSION_SECURE_COOKIES=${SESSION_SECURE_COOKIES}
+      - SSL_ENABLED=${SSL_ENABLED}
       
-      # Email configuration (optional)
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      EMAIL_FROM: ${EMAIL_FROM:-noreply@southdelhirealty.com}
+      # Server Configuration
+      - PORT=${PORT}
+      - NODE_ENV=${NODE_ENV}
+      - LOG_LEVEL=${LOG_LEVEL}
       
-      # Google OAuth (optional)
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # Security
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       
-      # Cloudinary (optional for image uploads)
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      # Client Configuration
+      - CLIENT_URL=${CLIENT_URL}
       
-      # Application URLs
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5000}
-      BACKEND_URL: ${BACKEND_URL:-http://localhost:5000}
+      # Google OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
       
+      # Email Configuration
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_SECURE=${EMAIL_SECURE}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+    env_file:
+      - .env
     volumes:
-      - uploads_data:/app/uploads
-      - logs_data:/app/logs
+      # Mount uploads directory for file persistence
+      - ./uploads:/app/uploads
+      # Mount logs directory for log persistence
+      - ./logs:/app/logs
     networks:
-      - sdr-network
+      - app-network
+    restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
+      - mysql
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
-      timeout: 3s
+      test: ["CMD", "node", "-e", "const http = require('http'); const options = { host: 'localhost', port: process.env.PORT || 7822, path: '/health', timeout: 2000 }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MySQL Database Service (Optional - for local development)
+  mysql:
+    image: mysql:8.0
+    container_name: south-delhi-realty-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      # Persist database data
+      - mysql_data:/var/lib/mysql
+      # Mount properties.sql for initialization
+      - ./properties.sql:/docker-entrypoint-initdb.d/01-properties.sql:ro
+      # Mount migrations for initialization
+      - ./migrations:/docker-entrypoint-initdb.d/migrations:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
       retries: 5
       start_period: 30s
 
-  # Nginx reverse proxy (optional, for production)
+  # Nginx Reverse Proxy (Optional - for production-like setup)
   nginx:
     image: nginx:alpine
-    container_name: sdr-nginx
-    restart: unless-stopped
+    container_name: south-delhi-realty-nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx-docker.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
-      - logs_data:/var/log/nginx
     networks:
-      - sdr-network
+      - app-network
     depends_on:
-      - webapp
+      - app
+    restart: unless-stopped
     profiles:
-      - nginx
+      - production
 
 volumes:
   mysql_data:
     driver: local
-  redis_data:
-    driver: local
-  uploads_data:
-    driver: local
-  logs_data:
-    driver: local
 
 networks:
-  sdr-network:
+  app-network:
     driver: bridge

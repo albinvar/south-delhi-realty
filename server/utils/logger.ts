@@ -1,30 +1,27 @@
+import { createLogger as createWinstonLogger, format, transports } from 'winston';
 import path from 'path';
-import winston from 'winston';
 
-export const createLogger = () => {
+export function createLogger() {
   const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
   
-  const logFormat = winston.format.combine(
-    winston.format.timestamp({
+  const logFormat = format.combine(
+    format.timestamp({
       format: 'YYYY-MM-DD HH:mm:ss'
     }),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
+    format.errors({ stack: true }),
+    format.json()
   );
 
-  const logger = winston.createLogger({
+  const logger = createWinstonLogger({
     level: logLevel,
     format: logFormat,
-    defaultMeta: { 
-      service: 'south-delhi-real-estate',
-      environment: process.env.NODE_ENV || 'development'
-    },
+    defaultMeta: { service: 'south-delhi-real-estate' },
     transports: [
-      // Console transport for development
-      new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.colorize(),
-          winston.format.simple()
+      // Always log to console
+      new transports.Console({
+        format: format.combine(
+          format.colorize(),
+          format.simple()
         )
       })
     ]
@@ -32,44 +29,37 @@ export const createLogger = () => {
 
   // Add file transports for production
   if (process.env.NODE_ENV === 'production') {
-    const logsDir = path.join(__dirname, '../../logs');
+    // Use relative path that works in Docker
+    const logsDir = path.resolve(process.cwd(), 'logs');
     
     // Error log
-    logger.add(new winston.transports.File({
+    logger.add(new transports.File({
       filename: path.join(logsDir, 'error.log'),
       level: 'error',
+      format: logFormat,
+      handleExceptions: true,
+      handleRejections: true,
       maxsize: 5242880, // 5MB
-      maxFiles: 10,
-      format: logFormat
+      maxFiles: 5,
     }));
 
     // Combined log
-    logger.add(new winston.transports.File({
+    logger.add(new transports.File({
       filename: path.join(logsDir, 'combined.log'),
+      format: logFormat,
       maxsize: 5242880, // 5MB
-      maxFiles: 10,
-      format: logFormat
+      maxFiles: 5,
     }));
 
-    // Access log for HTTP requests
-    logger.add(new winston.transports.File({
+    // Access log (info level and above)
+    logger.add(new transports.File({
       filename: path.join(logsDir, 'access.log'),
       level: 'info',
+      format: logFormat,
       maxsize: 5242880, // 5MB
-      maxFiles: 10,
-      format: logFormat
+      maxFiles: 5,
     }));
   }
 
-  // Handle exceptions and rejections
-  logger.exceptions.handle(
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  );
-
   return logger;
-}; 
+}

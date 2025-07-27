@@ -1,2 +1,1 @@
-import winston from 'winston';
-export declare const createLogger: () => winston.Logger;
+export declare function createLogger(): import("winston").Logger;
