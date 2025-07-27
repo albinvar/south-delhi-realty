@@ -29,8 +29,8 @@ COPY . .
 # Copy environment variables for build time
 COPY .env .env
 
-# Build the application
-RUN npm run build:production
+# Build the application (both client and server)
+RUN npm run build
 
 # Production image, copy all the files and run the app
 FROM base AS runner
