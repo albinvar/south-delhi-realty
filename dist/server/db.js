@@ -108,7 +108,7 @@ async function testDatabaseConnection(retries = 5, delay = 3000) {
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 30 seconds')), 30000))
             ]);
             await Promise.race([
-                conn.execute('SELECT 1 as test, NOW() as current_time'),
+                conn.execute('SELECT 1 as test'),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000))
             ]);
             console.log('✅ Database connection test successful');

@@ -188,23 +188,23 @@ async function startServer() {
     // Configure session middleware with improved production settings
     const sessionConfig: session.SessionOptions = {
       secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-      resave: true, // Force session save even if not modified
-      saveUninitialized: true, // Save uninitialized sessions
+      resave: false, // Don't save session if unmodified
+      saveUninitialized: false, // Don't create session until something stored
       store: storage.sessionStore,
       name: 'southdelhi.session',
       proxy: true, // Trust the reverse proxy
       rolling: true, // Reset the cookie Max-Age on every request
       cookie: {
-        secure: false, // Set to false for HTTP behind reverse proxy
+        secure: process.env.SESSION_SECURE_COOKIES === 'true', // Use env variable
         sameSite: 'lax' as const, // Use 'lax' for better compatibility
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: parseInt(process.env.SESSION_MAX_AGE || '86400000'), // Use env variable, default 24 hours
         httpOnly: true,
         domain: undefined, // Remove domain restriction for now
         path: '/' // Ensure cookie is available for all paths
       }
     };
 
-    // Only set secure cookies if explicitly enabled
+    // Only set secure cookies if explicitly enabled or in production with SSL
     if (process.env.NODE_ENV === 'production' && process.env.SSL_ENABLED === 'true') {
       sessionConfig.cookie!.secure = true;
     }

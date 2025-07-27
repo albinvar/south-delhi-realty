@@ -9,17 +9,20 @@ const drizzle_orm_1 = require("drizzle-orm");
 const express_session_1 = __importDefault(require("express-session"));
 const memorystore_1 = __importDefault(require("memorystore"));
 const db_1 = require("./db");
+const session_store_1 = require("./session-store");
 const MemoryStore = (0, memorystore_1.default)(express_session_1.default);
-const sessionStore = new MemoryStore({
-    checkPeriod: 86400000,
-    max: 1000,
-    ttl: 86400000,
-    stale: false,
-    dispose: (key, value) => {
-        console.log(`Session expired: ${key}`);
-    },
-    noDisposeOnSet: true
-});
+const sessionStore = process.env.SESSION_STORE_TYPE === 'database'
+    ? new session_store_1.DatabaseSessionStore()
+    : new MemoryStore({
+        checkPeriod: 86400000,
+        max: 1000,
+        ttl: 86400000,
+        stale: false,
+        dispose: (key, value) => {
+            console.log(`Session expired: ${key}`);
+        },
+        noDisposeOnSet: true
+    });
 async function withRetry(operation, maxRetries = 5, baseDelay = 2000, operationName = 'database operation') {
     let lastError;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {

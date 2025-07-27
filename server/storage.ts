@@ -3,6 +3,7 @@ import {
     nearbyFacilities,
     properties,
     propertyMedia,
+    sessions,
     users,
     type Inquiry,
     type InsertInquiry,
@@ -21,21 +22,24 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import session from "express-session";
 import memorystore from "memorystore";
 import { db } from "./db";
+import { DatabaseSessionStore } from "./session-store";
 
-// Create memory store constructor
+// Create memory store constructor as fallback
 const MemoryStore = memorystore(session);
 
-// Configure session store with better defaults
-const sessionStore = new MemoryStore({
-  checkPeriod: 86400000, // Prune expired entries every 24h
-  max: 1000, // Maximum number of sessions to store
-  ttl: 86400000, // Time to live - 24 hours
-  stale: false, // Don't return stale data
-  dispose: (key, value) => {
-    console.log(`Session expired: ${key}`);
-  },
-  noDisposeOnSet: true
-});
+// Choose session store based on environment
+const sessionStore = process.env.SESSION_STORE_TYPE === 'database' 
+  ? new DatabaseSessionStore()
+  : new MemoryStore({
+      checkPeriod: 86400000, // Prune expired entries every 24h
+      max: 1000, // Maximum number of sessions to store
+      ttl: 86400000, // Time to live - 24 hours
+      stale: false, // Don't return stale data
+      dispose: (key, value) => {
+        console.log(`Session expired: ${key}`);
+      },
+      noDisposeOnSet: true
+    });
 
 // Enhanced database retry wrapper function with better timeout handling
 async function withRetry<T>(

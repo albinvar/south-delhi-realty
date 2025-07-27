@@ -181,16 +181,16 @@ async function startServer() {
         }
         const sessionConfig = {
             secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-            resave: true,
-            saveUninitialized: true,
+            resave: false,
+            saveUninitialized: false,
             store: storage_1.storage.sessionStore,
             name: 'southdelhi.session',
             proxy: true,
             rolling: true,
             cookie: {
-                secure: false,
+                secure: process.env.SESSION_SECURE_COOKIES === 'true',
                 sameSite: 'lax',
-                maxAge: 24 * 60 * 60 * 1000,
+                maxAge: parseInt(process.env.SESSION_MAX_AGE || '86400000'),
                 httpOnly: true,
                 domain: undefined,
                 path: '/'

@@ -99,6 +99,15 @@ export const inquiries = mysqlTable("inquiries", {
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
 
+// Sessions table for database session storage
+export const sessions = mysqlTable("sessions", {
+  sessionId: text("session_id").primaryKey(),
+  expires: int("expires").notNull(),
+  data: text("data"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
 // Relations
 export const propertiesRelations = relations(properties, ({ many }) => ({
   media: many(propertyMedia),

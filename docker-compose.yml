@@ -43,17 +43,31 @@ services:
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASS=${EMAIL_PASS}
       - EMAIL_FROM=${EMAIL_FROM}
+      
+      # Session Configuration
+      - SESSION_STORE_TYPE=database
+      - SESSION_MAX_AGE=86400000
+      - SESSION_SECURE_COOKIES=false
+      - SSL_ENABLED=false
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
     networks:
       - southdelhirealty-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:7822/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "curl", "-f", "http://localhost:7822/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
 networks:
   southdelhirealty-network:

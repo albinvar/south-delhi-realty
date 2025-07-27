@@ -13,6 +13,8 @@ build/
 # dist/ - Allow dist directory for pre-built assets
 out/
 
+dist/
+
 # Environment Variables
 .env
 .env.local

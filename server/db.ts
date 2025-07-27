@@ -91,7 +91,7 @@ async function testDatabaseConnection(retries = 5, delay = 3000): Promise<void> 
       
       // Test with a simple query with timeout
       await Promise.race([
-        conn.execute('SELECT 1 as test, NOW() as current_time'),
+        conn.execute('SELECT 1 as test'),
         new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
         )

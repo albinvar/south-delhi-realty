@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.insertInquirySchema = exports.insertNearbyFacilitySchema = exports.insertPropertyMediaSchema = exports.insertPropertySchema = exports.insertUserSchema = exports.inquiriesRelations = exports.nearbyFacilitiesRelations = exports.propertyMediaRelations = exports.propertiesRelations = exports.inquiries = exports.nearbyFacilities = exports.propertyMedia = exports.properties = exports.users = exports.facilityTypeEnum = exports.inquiryStatusEnum = exports.mediaTypeEnum = exports.portionEnum = exports.parkingEnum = exports.facingEnum = exports.furnishedStatusEnum = exports.areaUnitEnum = exports.propertySubTypeEnum = exports.propertyTypeEnum = exports.propertyCategoryEnum = exports.propertyStatusEnum = void 0;
+exports.insertInquirySchema = exports.insertNearbyFacilitySchema = exports.insertPropertyMediaSchema = exports.insertPropertySchema = exports.insertUserSchema = exports.inquiriesRelations = exports.nearbyFacilitiesRelations = exports.propertyMediaRelations = exports.propertiesRelations = exports.sessions = exports.inquiries = exports.nearbyFacilities = exports.propertyMedia = exports.properties = exports.users = exports.facilityTypeEnum = exports.inquiryStatusEnum = exports.mediaTypeEnum = exports.portionEnum = exports.parkingEnum = exports.facingEnum = exports.furnishedStatusEnum = exports.areaUnitEnum = exports.propertySubTypeEnum = exports.propertyTypeEnum = exports.propertyCategoryEnum = exports.propertyStatusEnum = void 0;
 const drizzle_orm_1 = require("drizzle-orm");
 const mysql_core_1 = require("drizzle-orm/mysql-core");
 const drizzle_zod_1 = require("drizzle-zod");
@@ -85,6 +85,13 @@ exports.inquiries = (0, mysql_core_1.mysqlTable)("inquiries", {
     phone: (0, mysql_core_1.text)("phone").notNull(),
     message: (0, mysql_core_1.text)("message").notNull(),
     status: (0, mysql_core_1.mysqlEnum)("status", ['new', 'contacted', 'resolved']).default("new").notNull(),
+    createdAt: (0, mysql_core_1.timestamp)("created_at").defaultNow(),
+    updatedAt: (0, mysql_core_1.timestamp)("updated_at").defaultNow().onUpdateNow(),
+});
+exports.sessions = (0, mysql_core_1.mysqlTable)("sessions", {
+    sessionId: (0, mysql_core_1.text)("session_id").primaryKey(),
+    expires: (0, mysql_core_1.int)("expires").notNull(),
+    data: (0, mysql_core_1.text)("data"),
     createdAt: (0, mysql_core_1.timestamp)("created_at").defaultNow(),
     updatedAt: (0, mysql_core_1.timestamp)("updated_at").defaultNow().onUpdateNow(),
 });
