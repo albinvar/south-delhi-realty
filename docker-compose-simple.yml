@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # South Delhi Realty Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: southdelhirealty-app
+    restart: unless-stopped
+    ports:
+      - "7822:7822"
+    environment:
+      # Database Configuration (using external database - you'll need to configure this)
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-southdel_main}
+      - DB_PORT=${DB_PORT:-3306}
+      
+      # Server Configuration
+      - NODE_ENV=production
+      - PORT=7822
+      - LOG_LEVEL=info
+      - SESSION_SECRET=${SESSION_SECRET}
+      
+      # Client Configuration
+      - CLIENT_URL=${CLIENT_URL}
+      - ALLOWED_ORIGINS=http://localhost:7822,http://127.0.0.1:7822,http://localhost:5000,http://127.0.0.1:5000,https://southdelhirealty.com,http://app:7822
+      
+      # Cloudinary Configuration
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      
+      # Google OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      
+      # Email Configuration
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_SECURE=${EMAIL_SECURE}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      
+      # Session Configuration
+      - SESSION_STORE_TYPE=database
+      - SESSION_MAX_AGE=86400000
+      - SESSION_SECURE_COOKIES=false
+      - SSL_ENABLED=false
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    # Use host networking to connect to external database
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7822/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.8'
+        reservations:
+          memory: 512M
+          cpus: '0.4'

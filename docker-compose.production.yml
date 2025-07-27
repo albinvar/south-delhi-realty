@@ -1,0 +1,52 @@
+services:
+  # South Delhi Realty Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    image: southdelhirealty:latest
+    container_name: southdelhirealty-app
+    restart: unless-stopped
+    ports:
+      - "7822:7822"
+    env_file:
+      - .env
+    volumes:
+      # Persistent storage for uploads and logs
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7822/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.8'
+        reservations:
+          memory: 512M
+          cpus: '0.4'
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    # Read-only filesystem (except for volumes)
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+
+# Named volumes for persistent data
+volumes:
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
+
+# Custom network for the application
+networks:
+  app-network:
+    driver: bridge

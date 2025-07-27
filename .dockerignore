@@ -31,15 +31,22 @@ Thumbs.db
 .git
 .gitignore
 
-# Docker files
+# Docker files (except production ones)
 Dockerfile
 .dockerignore
-docker-compose*.yml
+docker-compose.yml
+!Dockerfile.production
+!docker-compose.production.yml
 
-# Documentation
+# Documentation (keep deployment guide)
 README.md
 SECURITY.md
 *.md
+!VPS_DEPLOYMENT_GUIDE.md
+
+# Deployment scripts (keep for production)
+!deploy-vps.sh
+!health-check.sh
 
 # Test files
 test

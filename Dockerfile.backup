@@ -1,21 +1,21 @@
-# South Delhi Real Estate - Production Dockerfile
+# South Delhi Real Estate - Production Dockerfile for Linux
 # Multi-stage build for smaller final image
 FROM node:18-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git python3 make g++
+RUN apk add --no-cache git python3 make g++ curl
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files first (for better caching)
+# Copy package files
 COPY package*.json ./
 COPY tsconfig*.json ./
 COPY vite.config.ts ./
 COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 
-# Install all dependencies (including dev dependencies for building)
+# Install dependencies
 RUN npm ci
 
 # Copy source code
@@ -34,26 +34,28 @@ FROM node:18-alpine AS production
 RUN apk add --no-cache curl dumb-init
 
 # Create a non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S appuser -u 1001 -G nodejs
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
 
 # Set working directory
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder --chown=appuser:nodejs /app/dist ./
-COPY --from=builder --chown=appuser:nodejs /app/package*.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/dist ./
+COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
 
 # Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
-# Create necessary directories with proper permissions
-RUN mkdir -p logs uploads && \
-    chown -R appuser:nodejs logs uploads && \
-    chmod -R 755 logs uploads
+# Create necessary directories
+RUN mkdir -p logs uploads && chown -R nextjs:nodejs logs uploads
+
+# Copy any additional config files needed
+COPY --chown=nextjs:nodejs ecosystem.config.cjs ./
+COPY --chown=nextjs:nodejs nginx.conf ./
 
 # Switch to non-root user
-USER appuser
+USER nextjs
 
 # Expose the port
 EXPOSE 7822

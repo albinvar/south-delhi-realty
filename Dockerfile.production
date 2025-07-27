@@ -1,0 +1,46 @@
+# South Delhi Real Estate - Production Dockerfile for VPS Deployment
+# Build locally first, then copy built application to production image
+
+# Production stage using a lightweight base image
+FROM node:18-alpine AS production
+
+# Install runtime dependencies and curl for health checks
+RUN apk add --no-cache curl dumb-init && \
+    rm -rf /var/cache/apk/*
+
+# Create a non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S appuser -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy the pre-built application (build locally before Docker)
+COPY dist/ ./
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production && \
+    npm cache clean --force && \
+    rm -rf ~/.npm
+
+# Create necessary directories with proper permissions
+RUN mkdir -p logs uploads && \
+    chown -R appuser:nodejs /app && \
+    chmod -R 755 logs uploads
+
+# Switch to non-root user
+USER appuser
+
+# Expose the port
+EXPOSE 7822
+
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:7822/health || exit 1
+
+# Use dumb-init for proper signal handling in containers
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["node", "server/index.js"]
