@@ -284,7 +284,7 @@ async function startServer() {
       }
     });
 
-    // Readiness check (for Kubernetes/Docker)
+    // Readiness check
     app.get('/ready', async (req: any, res: any) => {
       try {
         // Use the enhanced health check function with timeout

@@ -1,69 +1,83 @@
-# South Delhi Real Estate - Production Dockerfile
-# Multi-stage build for smaller final image
-FROM node:18-alpine AS builder
+# Multi-stage build for South Delhi Real Estate webapp
+FROM node:20-alpine AS base
 
 # Install build dependencies
-RUN apk add --no-cache git python3 make g++
+RUN apk add --no-cache libc6-compat
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files first (for better caching)
+# Copy package files
 COPY package*.json ./
-COPY tsconfig*.json ./
-COPY vite.config.ts ./
-COPY tailwind.config.ts ./
-COPY postcss.config.js ./
 
-# Install all dependencies (including dev dependencies for building)
-RUN npm ci
+# Install dependencies (use npm install instead of npm ci for better compatibility)
+RUN npm install --only=production && npm cache clean --force
+
+# Development stage
+FROM base AS development
+ENV NODE_ENV=development
+
+# Install all dependencies including dev dependencies
+RUN npm install
 
 # Copy source code
-COPY client/ ./client/
-COPY server/ ./server/
-COPY shared/ ./shared/
-COPY migrations/ ./migrations/
+COPY . .
 
-# Build the application
-RUN npm run build
+# Expose development ports
+EXPOSE 5000 5173
+
+# Start development server
+CMD ["npm", "run", "dev"]
+
+# Build stage
+FROM base AS builder
+ENV NODE_ENV=production
+
+# Install all dependencies including dev dependencies for build
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Build the application (simplified build process)
+RUN npm run build:server
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
+ENV NODE_ENV=production
 
-# Install runtime dependencies
-RUN apk add --no-cache curl dumb-init
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
-# Create a non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S appuser -u 1001 -G nodejs
+# Create app user for security
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S webapp -u 1001
 
 # Set working directory
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder --chown=appuser:nodejs /app/dist ./
-COPY --from=builder --chown=appuser:nodejs /app/package*.json ./
+COPY --from=builder --chown=webapp:nodejs /app/dist ./dist
+COPY --from=builder --chown=webapp:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=webapp:nodejs /app/node_modules ./node_modules
 
-# Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Copy necessary configuration files
+COPY --from=builder --chown=webapp:nodejs /app/shared ./shared
+COPY --from=builder --chown=webapp:nodejs /app/migrations ./migrations
 
-# Create necessary directories with proper permissions
-RUN mkdir -p logs uploads && \
-    chown -R appuser:nodejs logs uploads && \
-    chmod -R 755 logs uploads
+# Create required directories
+RUN mkdir -p uploads logs && chown -R webapp:nodejs uploads logs
 
 # Switch to non-root user
-USER appuser
+USER webapp
 
-# Expose the port
-EXPOSE 7822
+# Expose port
+EXPOSE 5000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:7822/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Use dumb-init for proper signal handling
+# Start application with proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-
-# Start the application
-CMD ["node", "server/index.js"]
+CMD ["node", "dist/server/index.js"]

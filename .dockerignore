@@ -1,131 +1,84 @@
-# Dependencies
-node_modules
+# Node modules
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Development files
+# Environment files
+.env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+.env.production
+.env.development
+.env.docker.local
 
-# Build outputs (will be rebuilt in container)
-dist
-client/dist
-.next
-out
+# Build artifacts
+dist/
+build/
+coverage/
 
-# IDE and editor files
-.vscode
-.idea
+# Logs
+logs/
+*.log
+pm2-*.log
+
+# Uploads and temporary files
+uploads/
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
-*~
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# Git
-.git
-.gitignore
-
-# Docker files (except production ones)
-Dockerfile
+# Docker files
+Dockerfile*
+docker-compose*.yml
 .dockerignore
-docker-compose.yml
-!Dockerfile.production
-!docker-compose.production.yml
 
-# Documentation (keep deployment guide)
-README.md
-SECURITY.md
+# Development files
 *.md
-!VPS_DEPLOYMENT_GUIDE.md
+ISSUE_RESOLUTION_SUMMARY.md
+DEPLOYMENT.md
 
-# Development scripts (except build scripts)
+# Scripts (keep only essential ones)
 scripts/
-!scripts/build-client.cjs
-!scripts/deploy-build.cjs
-
-# Deployment scripts (keep for production)
-!deploy-vps.sh
-!health-check.sh
-
-# Test files
-test
-tests
-**/*.test.js
-**/*.test.ts
-**/*.spec.js
-**/*.spec.ts
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Coverage directory used by tools like istanbul
-coverage
-
-# Temporary files
-tmp
-temp
-
-# Screenshots and other assets not needed in container
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-!client/public/*.png
-!client/public/*.jpg
-!client/public/*.jpeg
-!client/public/*.gif
-!client/public/*.svg
-
-# Development scripts (but keep build scripts)
-scripts/deploy-*
-scripts/check-*
 *.sh
-!docker-start.sh
-!scripts/build-client.cjs
-!scripts/prepare-deployment.js
-!scripts/pre-deploy-check.cjs
+*.cmd
 
-# Backup files
-*.backup
-*.bak
-*.orig
+# Testing
+coverage/
+*.test.js
+*.test.ts
 
-# Cache directories
-.cache
-.parcel-cache
+# Documentation
+docs/
+README.md
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Nginx
+nginx/
 
-# Dependency directories
-jspm_packages/
+# Archive files
+*.tar.gz
+*.zip
 
-# Optional npm cache directory
-.npm
+# Development configuration backups
+vite.config.ts.*
 
-# Optional eslint cache
-.eslintcache
+# TypeScript build info
+*.tsbuildinfo
 
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file (but keep .env for production)
-.env.example
-
-# Database files
-*.sql
-!init.sql 
+# Monitoring
+monitoring/
