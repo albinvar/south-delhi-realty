@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host # Add this line to fix the network issue
     container_name: south-delhi-realty-app
     ports:
       - "7922:7922"
